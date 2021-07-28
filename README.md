@@ -97,3 +97,12 @@ spring:
 1. maven
 
 2. lombok
+- @Data : 클래스안의 모든 private 필드에 대해 @Getter와 @Setter를 적용하여 세터/게터를 만들어주고 클래스 내에 @ToString 과 @EqualsAndHashCode를 적용하여 메소드를 오버라이드 해주며 @RequiredArgsConstructor를 지정
+- @Builder
+    - 인자가 많을 경우 쉽고 안전하게 객체를 생성
+    - 인자의 순서와 상관없이 객체를 생성
+    - 적절한 책임을 이름에 부여하고 가독성 높임
+- @AllArgsConstructor : 어노테이션은 모든 필드 값을 파라미터로 받는 생성자를 만들어줌
+- @NoArgsConstructor : 어노테이션은 파라미터가 없는 기본 생성자를 생성
+- @RequiredArgsConstructor : final 붙은 애들에 대한 constructor 만들어줌, @NonNull 인 필드 값만 파라미터로 받는 생성자
+- final 불변성 유지
