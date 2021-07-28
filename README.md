@@ -59,3 +59,36 @@ spring:
         username: test02
         password: 1111
 ```
+
+## 4. Http1.1 요청 방식
+
+1. Postman 설치 및 이용
+
+2. Http 1.1
+- get
+- post
+- delete
+- put
+
+3. stateless와 stateful
+
+- stateless : server side에 client와 server의 동작, 상태정보를 저장하지 않는 형태, server의 응답이 client와의 세션 상태와 독립적임.
+장점: 서버가 client정보를 저장관리 하지 않으므로 Sacling이 자유로움.
+- stateful : server side에 client와 server의 동작, 상태정보를 저장하는 형태, 세션 상태에 기반하여 server의 응답이 달라짐.
+
+[stateless vs stateful](https://5equal0.tistory.com/entry/StatefulStateless-Stateful-vs-Stateless-%EC%84%9C%EB%B9%84%EC%8A%A4%EC%99%80-HTTP-%EB%B0%8F-REST)
+
+4. [MIME 타입](https://developer.mozilla.org/ko/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types)
+
+5. Controller 생성 및 실습
+- HttpControllertest 생성
+- Get 메서드 : select, 여기서 GetTest(Member m) 방법도 있지만 @RequestParam 사용
+
+- Post 메서드 : insert, 여기서 postTest(String text) , @RequestBody 사용
+    
+    json { "id":1, "username": "kimmjen"}
+
+- Delete 메서드
+
+- Put 메서드
+
