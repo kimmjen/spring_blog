@@ -92,3 +92,8 @@ spring:
 
 - Put 메서드
 
+## 5. Lombok 세팅(Maven)
+
+1. maven
+
+2. lombok
