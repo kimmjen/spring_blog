@@ -215,3 +215,48 @@ OSIV를 활성화 하였다면 위에 옵션은 필요 없다. 그리고 OSIV는
 (8) jackson: serialization: fail-on-empty-beans : false
 
 : Lazy-loading으로 인해 empty-beans이 생길 수 있다. 너그럽게 빈 객체를 허락해주는 옵션이다.
+
+## 7. 테이블 세팅하기
+1. Blog 테이블 만들기(User, Board, Reply)
+
+2. 연관관계 만들기
+- @ManyToOne
+- @OneToMany
+- @OneToOne
+- @ManyToMany
+
+: ManyToMany는 사용하지 않음. 서로의 primary key로만 중간 테이블을 생성해주는데, 날짜나 시간 다른 필드들이 필요할 수도 있기 때문에, 직접 중간테이블을 만들고 @OneToMany를 사용.
+
+[연관관계](https://ict-nroo.tistory.com/127)
+
+3. 더미데이터 insert
+- @DynamicInsert inser할 때 null인 필드 제외
+
+4. 더미데이터 select 및 응답
+
+```
+User user = userRepository.findById(id).orElseThrow(new Supplier<IllegalArgumentException>() {
+			@Override
+			public IllegalArgumentException get() {
+				return new IllegalArgumentException("해당 사용자가 없습니다.");
+			}
+		});
+```
+```
+@PageableDefault(size=2, sort="id", direction = Sort.Direction.DESC) Pageable pageable
+```
+
+5. 더미데이터 update 
+
+[영속성 컨텍스트와 플러시 이해하기](https://ict-nroo.tistory.com/130)
+
+6. 더미데이터 delete
+
+7. 무한 참조 방지
+(1) Entity로 받고 Json직렬화 하기 전에 DTO 생성후 복사 BeanUtils.copyProperties(A, B)
+(2) 처음부터 DTO로 DB에서 받기
+(3) @JsonIgnore
+(4) @JsonIgnoreProperties({"board"})
+(5) @JsonBackReference, @JsonManagedReferece
+
+[JPA Entity를 Json으로 변환할 때 발생하는 문제점과 해결방안](https://dublin-java.tistory.com/32)
