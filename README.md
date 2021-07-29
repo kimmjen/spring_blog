@@ -225,6 +225,45 @@ OSIV를 활성화 하였다면 위에 옵션은 필요 없다. 그리고 OSIV는
 - @OneToOne
 - @ManyToMany
 
+`Board, User`
+
+```
+
+Hibernate: 
+    
+    drop table if exists Board
+Hibernate: 
+    
+    drop table if exists User
+Hibernate: 
+    
+    create table Board (
+       id integer not null auto_increment,
+        content longtext,
+        count integer default 0 not null,
+        createDate datetime(6),
+        title varchar(100) not null,
+        userId integer,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table User (
+       id integer not null auto_increment,
+        createDate datetime(6),
+        email varchar(50) not null,
+        password varchar(100) not null,
+        role varchar(255) default 'user',
+        username varchar(30) not null,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    alter table Board 
+       add constraint FKnwfsptg8pbhl5hnphivfydtpy 
+       foreign key (userId) 
+       references User (id)
+```
 : ManyToMany는 사용하지 않음. 서로의 primary key로만 중간 테이블을 생성해주는데, 날짜나 시간 다른 필드들이 필요할 수도 있기 때문에, 직접 중간테이블을 만들고 @OneToMany를 사용.
 
 [연관관계](https://ict-nroo.tistory.com/127)
