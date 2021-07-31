@@ -315,11 +315,16 @@ User user = userRepository.findById(id).orElseThrow(new Supplier<IllegalArgument
 6. 더미데이터 delete
 
 7. 무한 참조 방지
-(1) Entity로 받고 Json직렬화 하기 전에 DTO 생성후 복사 BeanUtils.copyProperties(A, B)
-(2) 처음부터 DTO로 DB에서 받기
+
+(1) Entity로 받고 Json직렬화 하기 전에 DTO 생성후 복사 BeanUtils.copyProperties(A, B) 
+
+(2) 처음부터 DTO로 DB에서 받기    
+
 (3) @JsonIgnore
-(4) @JsonIgnoreProperties({"board"})
-(5) @JsonBackReference, @JsonManagedReferece
+
+(4) @JsonIgnoreProperties({"board"})    
+
+(5) @JsonBackReference, @JsonManagedReferece  
 
 [JPA Entity를 Json으로 변환할 때 발생하는 문제점과 해결방안](https://dublin-java.tistory.com/32)
 
