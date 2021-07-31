@@ -308,6 +308,8 @@ User user = userRepository.findById(id).orElseThrow(new Supplier<IllegalArgument
 
 5. 더미데이터 update 
 
+: save 대신 @Transactional을 이용하여 더티체킹
+
 [영속성 컨텍스트와 플러시 이해하기](https://ict-nroo.tistory.com/130)
 
 6. 더미데이터 delete

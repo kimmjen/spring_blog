@@ -3,6 +3,8 @@ package org.kimmjen.blog.test;
 import java.util.List;
 import java.util.function.Supplier;
 
+import javax.transaction.Transactional;
+
 import org.kimmjen.blog.model.RoleType;
 import org.kimmjen.blog.model.User;
 import org.kimmjen.blog.repository.UserRepository;
@@ -14,6 +16,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 // html 파일이 아니라 data를 리턴해주는 controller = RestController
@@ -22,6 +26,33 @@ public class DummyControllerTest {
 
     @Autowired // 의존성 주입(DI)
     private UserRepository userRepository;
+
+    // save는 id를 전달하지않으면 insert를 해주고
+    // save함수는 id를 전달하면 해당 id에 대한 데이터가 있으면 update를 해주고
+    // save함수는 id를 전달하면 해당 id에 대한 데이터가 없으면 insert를 한다.
+    // email, password
+    @Transactional // 함수 종료시에 자동 commit이 됨.
+    @PutMapping("/dummy/user/{id}")
+    public User updateUser(@PathVariable int id, @RequestBody User requestUser) { // json 데이터를 요청 -> java
+                                                                                  // object(MessageConverter의
+                                                                                  // Jackson라이브러리가 변환해서 받음)
+
+        System.out.println("id: " + id);
+        System.out.println("password: " + requestUser.getPassword());
+        System.out.println("email: " + requestUser.getEmail());
+
+        User user = userRepository.findById(id).orElseThrow(() -> {
+            return new IllegalArgumentException("수정에 실패하였습니다.");
+        });
+        user.setPassword(requestUser.getPassword());
+        user.setEmail(requestUser.getEmail());
+        // requestUser.setId(id);
+        // requestUser.setUsername("ssar");
+        // userRepository.save(requestUser);
+
+        // 더티체킹
+        return null;
+    }
 
     // http://localhost:8000/dummy/user
     @GetMapping("/dummy/users")
