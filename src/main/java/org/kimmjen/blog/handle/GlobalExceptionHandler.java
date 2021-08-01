@@ -13,9 +13,9 @@ public class GlobalExceptionHandler {
         return "<h1>" + e.getMessage() + "</h1>";
     }
 
-    @ExceptionHandler(value = Exception.class)
-    public String handleArgumentException(Exception e) {
-        return "<h1>" + e.getMessage() + "</h1>";
-    }
+    // @ExceptionHandler(value = Exception.class)
+    // public String handleArgumentException(Exception e) {
+    // return "<h1>" + e.getMessage() + "</h1>";
+    // }
 
 }

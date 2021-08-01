@@ -33,7 +33,7 @@ public class User {
 	// 넘버링 전략
 	private int id; // 시퀸스, auto_increment
 
-	@Column(length = 30, nullable = false)
+	@Column(length = 30, nullable = false, unique = true)
 	private String username; // 아이디
 	@Column(length = 100, nullable = false) // 나중에 해쉬를 이용해 비밀번호 암호화
 	private String password; // 비밀번호

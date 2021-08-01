@@ -330,11 +330,25 @@ User user = userRepository.findById(id).orElseThrow(new Supplier<IllegalArgument
 
 ## 8. Json 데이터로 통신하기
 
-1. Get요청
+1. Get요청(select)
 : 주소에 데이터를 담아 보낸다. 데이터의 형태는 key=value
 
-2. Post, Put, Delete 요청
+2. Post, Put, Delete 요청(데이터를 변경)
 : Body에 데이터를 담아 보낸다. 데이터 형태는 json으로 통일하는 것이 좋다.
+- username, password, email, address, gender, createDate
+- form태그 method = 'Post'
+- form태그 -> get요청, post요청(key =value)
+- 자바스크립트로 요청을 해야함.
+
+- 통일 : 자바스크립트로 ajax요청 + 데이터는 json으로 통일
+
+- form:form 태그 -> get요청, put요청, post요청, delete요청 - 사용x
+
+- 오브젝트로 데이터 받기
+post 방식의 key=value(x-www-form-urlencoded)
+
+username  
+password
 
 3. 스프링 컨트롤러의 파싱 전략1
 : 스프링 컨트롤러는 key=value 데이터를 자동으로 파싱하여 변수에 담아준다. 가령 get요청은 key=value이고 post요청 중에 x-www-form-urlencoded (form태크를 만들어서 데이터 전송) 시에도 key=value이기 때문에 이러한 데이터는 아래와 같이 함수의 parameter로 받을 수 있다.
