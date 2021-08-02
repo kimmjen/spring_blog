@@ -6,23 +6,19 @@
 	
 	<form  action="/user/login" method="POST">
 		<div class="form-group">
-			<label for="uname">아이디:</label> <input type="text"
-				class="form-control" id="uname" placeholder="Enter username"
-				name="uname" required>
-			<div class="valid-feedback">Valid.</div>
-			<div class="invalid-feedback">Please fill out this field.</div>
+			<label for="username">아이디:</label> <input type="text"
+				class="form-control" id="username" placeholder="Enter username">
 		</div>
 		
 		<div class="form-group">
-			<label for="pwd">비밀번호:</label> <input type="password"
-				class="form-control" id="pwd" placeholder="Enter password"
-				name="pswd" required>
-			<div class="valid-feedback">Valid.</div>
-			<div class="invalid-feedback">Please fill out this field.</div>
+			<label for="password">비밀번호:</label> <input type="password"
+				class="form-control" id="password" placeholder="Enter password">
+
 		</div>
 		
 		
-		<button type="submit" class="btn btn-primary">로그인하기</button>
+		<button id="btn-login" class="btn btn-primary">로그인하기</button>
 	</form>
 </div>
+
 <%@ include file="../layout/footer.jsp"%>
