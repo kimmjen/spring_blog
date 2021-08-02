@@ -20,7 +20,7 @@
 		</div>
 		
 	</form>
-	<button id="btn-save" class="btn btn-primary">회원가입하기</button>
+	<button id="btn-save" class="btn btn-primary">회원가입</button>
 </div>
 
 <script src="../js/user.js"></script>

@@ -27,7 +27,7 @@
 
 <body>
 	<nav class="navbar navbar-expand-md bg-dark navbar-dark">
-		<a class="navbar-brand" href="/blog"> <img alt="Logo" src=""
+		<a class="navbar-brand" href="/"> <img alt="Logo" src=""
 			style="width: 40px;">
 		</a>
 		<button class="navbar-toggler" type="button" data-toggle="collapse"
@@ -40,8 +40,8 @@
 			<c:choose>
 				<c:when test="${empty sessionScope.principal}">
 					<ul class="navbar-nav">
-						<li class="nav-item"><a class="nav-link" href="user/loginForm">로그인</a></li>
-						<li class="nav-item"><a class="nav-link" href="user/joinForm">회원가입</a></li>
+						<li class="nav-item"><a class="nav-link" href="loginForm">로그인</a></li>
+						<li class="nav-item"><a class="nav-link" href="joinForm">회원가입</a></li>
 					</ul>
 				</c:when>
 
