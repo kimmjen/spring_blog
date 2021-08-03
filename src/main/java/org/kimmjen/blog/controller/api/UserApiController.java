@@ -28,7 +28,7 @@ public class UserApiController {
 	private UserService userService;
 	
 	
-	@PostMapping("/api/user")
+	@PostMapping("/auth/joinProc")
 	public ResponseDto<Integer> save(@RequestBody User user) {
 		
 		System.out.println("UserApiController : save 호출됨");

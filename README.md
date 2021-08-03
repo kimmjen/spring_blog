@@ -514,3 +514,98 @@ PHANTOM READ(데이터가 보였다. 안보였다.) -> 정합성이 깨짐
 - 세션은 컨트롤러 영역까지 끌고 가기 때문에 영속성이 보장되어 select가 가능해지고, lazy-loading 이 가능해진다.
 
 ![a4](a4.png)
+
+## 11. 시큐리티 코드짜기.
+
+- [스프링 시큐리티 태그라이브러리](https://www.baeldung.com/spring-security-taglibs)
+
+- [스프링 시큐리티 태그라이브러리 - 메뉴얼](https://docs.spring.io/spring-security/site/docs/3.0.x/reference/el-access.html)
+
+pom.xml에서 주석처리 하였던 시큐리티 관련 주석해체
+
+org.kimmjen.blog.config이하 파일 생성
+
+주소 세팅
+- / (컨텍스트 삭제)
+- /auth/joinProc
+- /auth/loginProc
+- /auth/joinForm
+- /auth/loginForm
+
+- auth 붙이는 이유: 인증이 안된 사용자들이 출입할 수 있는 경로를 /auth/** 허용, 그냥 주소가 / 이면 index.jsp 허용, static 이하의 `/js/*`, `/css/*`, `/image/*`
+
+```jsp
+header.jsp
+joinForm.jsp
+user.js
+UserApiController.java
+UserController.java
+```
+
+**SecurityConfig.java**
+
+로그인 페이지 커스터마이징
+
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
+
+
+@Configuration // 빈 등록 (객체 생성)
+@EnableWebSecurity // 필터 체인에 등록 (스프링 시큐리티 활성화)
+@EnableGlobalMethodSecurity(prePostEnabled=true) // 특정 주소 접근시 권한 및 인증을 pre(미리) 체크하겠다.
+public class SecurityConfig extends WebSecurityConfigurerAdapter{
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		http
+	    .authorizeRequests()
+	    .antMatchers("/auth/loginForm", "/auth/joinForm")
+	    .permitAll()
+	    .anyRequest().authenticated()
+	    .and()
+	    .formLogin().loginPage("/auth/loginForm");   
+	}
+}
+
+```
+
+```
+1. 주소정리.
+
+2. user.js -> 로그인 관련 js 주석처리
+
+3. user.js -> $.ajax 내에 url: -> auth/joinProc 변경
+
+4. config(설정)패키지 생성,SecurityConfig class 생성(@Configuration : Bean 등록의 의미는 스프링 컨테이너에서 객체를 관리할 수 있게 하는 것,@EnableWebSecurity // 필터를 거는것, @EnableGlobalMethodSecurity(prePostEnabled = true) // 특정 주소로 접근하면 권한및 인증을 미리 체크)
+
+5.
+http
+.authorizeRequests()	: 요청이 들어오면 요청에 대한 인가
+.antMatchers("/auth/**")	: 요청에 대해 확인(joinForm, loginForm)
+.permitAll()		: 
+.anyRequest()		: 다른 모든 요청은
+.authenticated();		: 인증이 되야 가능하다.
+
+6. 앱 실행 후 접근제한 확인.
+
+7.
+.and()
+.formLogin()
+.loginPage("/auth/loginForm");
+
+```
+
+||
+|--|
+|@Configuration|
+|해당 클래스를 Configuration으로 등록|
+|@EnableWebSecurity|
+|spring Security를 활성화 시킨다.|
+|@EnableGlobalMethodSecurity(prePostEnabled=true)|
+|Controller에서 특정 페이지에 특정 권한이 있는 유저만 접근을 허용할 경우 @PreAuthorize 어노테이션을 사용하는데, 해당 어노테이션에 대한 설정을 활성화시키는 어노테이션이다.(필수는 아님)|
+||
+
