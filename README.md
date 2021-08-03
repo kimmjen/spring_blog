@@ -652,5 +652,120 @@ http
 
 변경
 
+```
+
+`Security Config`
+```java
+package org.kimmjen.blog.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+// Bean 등록의 의미는 스프링 컨테이너에서 객체를 관리할 수 있게 하는 것(IoC관리)
+@Configuration
+// requestController 실행되기 전에 securityconfig이 먼저 실행됨.
+@EnableWebSecurity // 필터를 거는것= 스프링 시큐리티가 활성화 되어있는데, 어떤 설정을 해당 파일에서 관리하겠다 라는 뜻.
+// 시큐리티 필터가 등록
+@EnableGlobalMethodSecurity(prePostEnabled = true) // 특정 주소로 접근하면 권한및 인증을 미리 체크
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	// 해쉬(비밀번호)
+	@Bean // IoC가 된다. new BCryptPasswordEncoder() 이것은 스프링이 관리한다.
+	public BCryptPasswordEncoder encodePWD() {
+		
+		return new BCryptPasswordEncoder();
+	}
+	
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		
+		http
+		.csrf().disable() // csrf 토큰 비활성화(테스트할때)
+			.authorizeRequests()
+				.antMatchers("/","/auth/**", "/js/**", "/css/**", "/image/**") //접근
+				.permitAll()
+				.anyRequest()
+				.authenticated()
+			.and()
+				.formLogin()
+				.loginPage("/auth/loginForm");
+		
+	}
+
+}
 
 ```
+`UserService`
+
+```java
+package org.kimmjen.blog.service;
+
+
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+
+// 스프링이 컴포넌트 스캔을 통해서 bean에 등록을 해줌. IOC를 해준다.
+@Service
+public class UserService {
+	
+	@Autowired
+	private UserRepository userRepository;
+	
+	@Autowired
+	private BCryptPasswordEncoder encoder;
+	
+	@Transactional
+	public void 회원가입(User user) {
+		
+		String rawPassword = user.getPassword();
+		
+		String encPassword = encoder.encode(rawPassword);
+		user.setPassword(encPassword);
+		user.setRole(RoleType.USER);
+		userRepository.save(user);
+	}
+//		t
+	
+//	@Transactional
+//	public void 회원가입(User user) {
+//		userRepository.save(user);
+//	}
+	
+	
+//		try {
+//			userRepository.save(user);
+//			
+//			return 1;
+//			
+//		} catch (Exception e) {
+//			
+//			e.printStackTrace();
+//			System.out.println("UserService: 회원가입() : " + e.getMessage());
+//			
+//		}
+//		return -1;
+	
+//	@Transactional(readOnly = true) // select 할때 트랜잭션 시작, 서비스 종료될 때 트랜잭션 종료(정합성 유지)
+//	public User 로그인(User user) {
+//		return userRepository.findByUsernameAndPassword(user.getUsername(), user.getPassword());
+//	}
+//	//@Transactional
+//	// public User 로그인(User user) {
+//	//	return userRepository.findByUsernameAndPassword(user.getUsername(), user.getPassword());
+//	//}
+}
+
+```
+
+
