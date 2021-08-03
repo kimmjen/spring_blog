@@ -609,3 +609,48 @@ http
 |Controller에서 특정 페이지에 특정 권한이 있는 유저만 접근을 허용할 경우 @PreAuthorize 어노테이션을 사용하는데, 해당 어노테이션에 대한 설정을 활성화시키는 어노테이션이다.(필수는 아님)|
 ||
 
+`비밀번호 해쉬`
+---
+
+```
+비밀번호 해쉬 후 회원가입
+
+1. security config 클래스 생성
+ // 해쉬(비밀번호 )
+@Bean
+public BCryptPasswordEncoder encodePWD() {
+return new BCryptPasswordEncoder();
+}
+
+2. userserver 클래스에
+@Autowired
+private BCryptPasswordEncoder encoder;
+
+@Transactional
+public void 회원가입(User user) {
+	
+	String rawPassword = user.getPassword();
+	
+	String encPassword = encoder.encode(rawPassword);
+	user.setPassword(encPassword);
+	user.setRole(RoleType.USER);
+	userRepository.save(user);
+}
+
+
+3. security config클래스에 
+http
+		.csrf().disable() // csrf 토큰 비활성화(테스트할때)
+			.authorizeRequests()
+				.antMatchers("/","/auth/**", "/js/**", "/css/**", "/image/**") //접근
+				.permitAll()
+				.anyRequest()
+				.authenticated()
+			.and()
+				.formLogin()
+				.loginPage("/auth/loginForm");
+
+변경
+
+
+```
