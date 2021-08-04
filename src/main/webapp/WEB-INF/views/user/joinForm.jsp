@@ -3,24 +3,26 @@
 <%@ include file="../layout/header.jsp"%>
 
 <div class="container">
-	<h2>회원가입 화면</h2>
-	
+	<h2> 외원가입 화면</h2>
 	<form>
 		<div class="form-group">
-			<label for="username">닉네임:</label>
-			<input type="text" class="form-control" id="username" placeholder="Enter username">
+			<label for="username">Username</label> 
+			<input type="text" class="form-control" placeholder="Enter username" id="username">
 		</div>
+		
 		<div class="form-group">
-			<label for="password">비밀번호:</label>
-			<input type="password" class="form-control" id="password" placeholder="Enter password">
+			<label for="password">Password</label> 
+			<input type="password" class="form-control" placeholder="Enter password" id="password">
 		</div>
+		
 		<div class="form-group">
-			<label for="email">이메일:</label>
-			<input type="email" class="form-control" id="email" placeholder="Enter email">
+			<label for="email">Email</label> 
+			<input type="email" class="form-control" placeholder="Enter email" id="email">
 		</div>
 		
 	</form>
-	<button id="btn-save" class="btn btn-primary">회원가입</button>
+	<button id="btn-save" class="btn btn-primary">회원가입완료</button>
+
 </div>
 
 <script src="../js/user.js"></script>

@@ -768,4 +768,342 @@ public class UserService {
 
 ```
 
+시큐리티 최종작업
+---
 
+`PrincipalDetail.java`
+```java
+package org.kimmjen.blog.config.auth;
+
+import java.util.ArrayList;
+import java.util.Collection;
+
+import org.kimmjen.blog.model.User;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import lombok.Data;
+
+// 스프링 시큐리티가 로그인 요청을 가로채서 로그인을 진행하고 완료가 되면 UserDetails 타입의 오브젝트를
+// 스프링 시큐리티의 고유한 세션 저장소에 저장을 해준다.
+public class PrincipalDetail implements UserDetails{
+	private User user; // 콤포지션
+
+	public PrincipalDetail(User user) {
+		this.user = user;
+	}
+	
+	@Override
+	public String getPassword() {
+		return user.getPassword();
+	}
+
+	@Override
+	public String getUsername() {
+		return user.getUsername();
+	}
+
+	// 계정이 만료되지 않았는지 리턴한다. (true: 만료안됨)
+	@Override
+	public boolean isAccountNonExpired() {
+		return true;
+	}
+
+	// 계정이 잠겨있지 않았는지 리턴한다. (true: 잠기지 않음)
+	@Override
+	public boolean isAccountNonLocked() {
+		return true;
+	}
+
+	// 비밀번호가 만료되지 않았는지 리턴한다. (true: 만료안됨)
+	@Override
+	public boolean isCredentialsNonExpired() {
+		return true;
+	}
+
+	// 계정이 활성화(사용가능)인지 리턴한다. (true: 활성화)
+	@Override
+	public boolean isEnabled() {
+		return true;
+	}
+	
+	// 계정이 갖고있는 권한 목록을 리턴한다. (권한이 여러개 있을 수 있어서 루프를 돌아야 하는데 우리는 한개만)
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+		
+		Collection<GrantedAuthority> collectors = new ArrayList<>();
+		collectors.add(()->{ return "ROLE_"+user.getRole();});
+		
+		return collectors;
+	}
+	
+}
+```
+
+`PrincipalDetailService.java`
+```java
+package org.kimmjen.blog.config.auth;
+
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.UserRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+@Service // Bean 등록
+public class PrincipalDetailService implements UserDetailsService {
+	
+	@Autowired
+	private UserRepository userRepository;
+	
+	// 스프링이 로그인 요청을 가로챌 때, username, password 변수 2개를 가로채는데
+	// password 부분 처리는 알아서 함.
+	// username이 DB에 있는지만 확인해주면 됨.
+	@Override
+	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		User principal = userRepository.findByUsername(username)
+				.orElseThrow(()->{
+					return new UsernameNotFoundException("해당 사용자를 찾을 수 없습니다. : "+username);
+				});
+		return new PrincipalDetail(principal); // 시큐리티의 세션에 유저 정보가 저장이 됨.
+	}
+}
+
+```
+
+`User.java`
+```java
+package org.kimmjen.blog.model;
+
+import java.sql.Timestamp;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicInsert;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+// ORM -> Java(다른언어) Object를 테이블로 매핑해주는 기술
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity // User 클래스가 MySQL에 테이블이 생성.
+//@DynamicInsert // insert 시에 null인 필드를 제외
+public class User {
+	
+	@Id //Primary key
+	@GeneratedValue(strategy = GenerationType.IDENTITY) // 프로젝트에서 연결된 DB의 넘버링 전략을 따라간다.
+	private int id; // 시퀀스, auto_increment
+	 
+	@Column(nullable = false, length = 30, unique = true) 
+	private String username; // 아이디
+	
+	@Column(nullable = false, length = 100) // 123456 => 해쉬 (비밀번호 암호화)
+	private String password;
+	
+	@Column(nullable = false, length = 50)
+	private String email; // myEmail, my_email
+
+	// @ColumnDefault("user")
+	// DB는 RoleType이라는 게 없다.
+	@Enumerated(EnumType.STRING)
+	private RoleType role; // Enum을 쓰는게 좋다. // ADMIN, USER
+	
+	// 내가 직접 시간을 넣으려면 Timestamp.valueOf(LocalDateTime.now())
+	@CreationTimestamp
+	private Timestamp createDate;
+
+//	@Id // Primary Key
+//	@GeneratedValue(strategy = GenerationType.IDENTITY) // 프로젝트에서 연결된 DB의 넘버링 전략을 따라간다.
+//	// 넘버링 전략
+//	private int id; // 시퀸스, auto_increment
+//
+//	@Column(length = 30, nullable = false, unique = true)
+//	private String username; // 아이디
+//	@Column(length = 100, nullable = false) // 나중에 해쉬를 이용해 비밀번호 암호화
+//	private String password; // 비밀번호
+//	@Column(length = 50, nullable = false)
+//	private String email; //
+//
+//	// @ColumnDefault("'user'") // " ' ' "
+//	// DB는 RoleType이라는 게 없다.
+//	@Enumerated(EnumType.STRING)
+//	private RoleType role; // Enum을 쓰는게 좋다. 열걸, USER, MANAGER, ADMIN 1 ~80, 81 ~ 90, 91 ~ 100 이런 느낌
+//
+//	@CreationTimestamp // 시간이 자동입력
+//	private Timestamp createDate; //
+//	// private Timestamp updateDate;
+
+}
+
+```
+
+`UserRepository.java`
+```java
+package org.kimmjen.blog.repository;
+
+import java.util.Optional;
+
+import org.kimmjen.blog.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+// DAO
+// 자동으로 bean등록이 된다
+// @Repository // 생략가능하다.
+public interface UserRepository extends JpaRepository<User, Integer> {
+
+	// SELECT * fROM user WHERE username = 1?;
+	Optional<User> findByUsername(String username);
+	
+}
+
+// 시큐리티 적용전 버전
+//JPA 네이밍 쿼리
+	// SELECT * FROM user WHERE username = ?1 AND password = ?2; 
+	// User findByUsernameAndPassword(String username, String password);
+	
+	//	@Query(value = "SELECT * FROM user WHERE username = ?1 AND password = ?2", nativeQuery = true)
+	//	User login(String username, String password);
+```
+
+`BoardController.java`
+```java
+package org.kimmjen.blog.controller;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class BoardController {
+//	
+//	@Autowired
+//	private PrincipalDetail principal;
+
+	// @AuthenticationPrincipal PrincipalDetail principal
+    @GetMapping({"","/"})
+    public String index(@AuthenticationPrincipal PrincipalDetail principal) { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+    	// WEB-INF/views/index
+    	
+    	System.out.println("로그인 사용자 아이디: " + principal.getUsername());
+        return "index";
+    }
+}
+
+```
+
+`SecurityConfig.java`
+```java
+package org.kimmjen.blog.config;
+
+import org.kimmjen.blog.config.auth.PrincipalDetailService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+// Bean 등록의 의미는 스프링 컨테이너에서 객체를 관리할 수 있게 하는 것(IoC관리)
+@Configuration
+// requestController 실행되기 전에 securityconfig이 먼저 실행됨.
+@EnableWebSecurity // 필터를 거는것= 스프링 시큐리티가 활성화 되어있는데, 어떤 설정을 해당 파일에서 관리하겠다 라는 뜻.
+// 시큐리티 필터가 등록
+@EnableGlobalMethodSecurity(prePostEnabled = true) // 특정 주소로 접근하면 권한및 인증을 미리 체크
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PrincipalDetailService principalDetailService;
+	
+	@Bean // IoC가 되요!!
+	public BCryptPasswordEncoder encodePWD() {
+		return new BCryptPasswordEncoder();
+	}
+	
+	// 시큐리티가 대신 로그인해주는데 password를 가로채기를 하는데
+	// 해당 password가 뭘로 해쉬가 되어 회원가입이 되었는지 알아야
+	// 같은 해쉬로 암호화해서 DB에 있는 해쉬랑 비교할 수 있음.
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.userDetailsService(principalDetailService).passwordEncoder(encodePWD());
+	}
+	
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		http
+			.csrf().disable()  // csrf 토큰 비활성화 (테스트시 걸어두는 게 좋음)
+			.authorizeRequests()
+				.antMatchers("/", "/auth/**", "/js/**", "/css/**", "/image/**")
+				.permitAll()
+				.anyRequest()
+				.authenticated()
+			.and()
+				.formLogin()
+				.loginPage("/auth/loginForm")
+				.loginProcessingUrl("/auth/loginProc")
+				.defaultSuccessUrl("/"); // 스프링 시큐리티가 해당 주소로 요청오는 로그인을 가로채서 대신 로그인 해준다.
+	}
+//	@Autowired
+//	private PrincipalDetailService principalDetailService;
+//	
+//	// 해쉬(비밀번호)
+//	@Bean // IoC가 된다. new BCryptPasswordEncoder() 이것은 스프링이 관리한다.
+//	public BCryptPasswordEncoder encodePWD() {
+//		
+//		return new BCryptPasswordEncoder();
+//	}
+//	
+//	// 시큐리티가 대신 로그인해주는데 password를 가로채기를 하는데
+//	// 해당 password가 뭘로 해쉬가 되어 회원가입이 되었는지 알아야
+//	// 같은 해쉬로 암호화해서 DB에 있는 해쉬랑 비교할 수 있음.
+//	@Override
+//	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		
+//		auth.userDetailsService(principalDetailService).passwordEncoder(encodePWD());
+//	}
+//	
+//	@Override
+//	protected void configure(HttpSecurity http) throws Exception {
+//		
+//		http
+//		.csrf().disable() // csrf 토큰 비활성화(테스트할때)
+//			.authorizeRequests()
+//				.antMatchers("/","/auth/**", "/js/**", "/css/**", "/image/**") //접근
+//				.permitAll()
+//				.anyRequest()
+//				.authenticated()
+//			.and()
+//				.formLogin()
+//				.loginPage("/auth/loginForm")
+//				.loginProcessingUrl("/auth/loginProc") // 스프링시큐리티가 해당 주소로 요청오는 로그인을 가로챈다.
+//				.defaultSuccessUrl("/"); //로그인 성공시
+////				.failureUrl(null) 로그인실패시
+//		
+//	}
+
+}
+
+```
+
+이 과정 후 localhost:8000 들어갔지만 principal is null 이 뜰 경우 localhost:8000/blog/auth/loginForm 들어가서 먼저 로그인

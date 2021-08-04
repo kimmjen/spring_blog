@@ -1,5 +1,7 @@
 package org.kimmjen.blog.repository;
 
+import java.util.Optional;
+
 import org.kimmjen.blog.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 // @Repository // 생략가능하다.
 public interface UserRepository extends JpaRepository<User, Integer> {
 
+	// SELECT * fROM user WHERE username = 1?;
+	Optional<User> findByUsername(String username);
 	
 }
 

@@ -5,7 +5,7 @@
 	uri="http://www.springframework.org/security/tags"%>
 
 <sec:authorize access="isAuthenticated()">
-	<sec:authentication property="principal" var="principal" />
+	<sec:authentication property="principal" var="principal"/>
 </sec:authorize>
 
 <!DOCTYPE html>
@@ -55,19 +55,19 @@
 
 				<c:otherwise>
 					<ul class="navbar-nav">
-						<li class="nav-item"><a class="nav-link" href="board/writeForm">글쓰기</a></li>
-						<li class="nav-item"><a class="nav-link" href="user/userForm">회원정보</a></li>
-						<li class="nav-item"><a class="nav-link" href="logout">로그아웃</a></li>
+						<li class="nav-item"><a class="nav-link" href="/board/writeForm">글쓰기</a></li>
+						<li class="nav-item"><a class="nav-link" href="/user/userForm">회원정보</a></li>
+						<li class="nav-item"><a class="nav-link" href="/logout">로그아웃</a></li>
 					</ul>
 				</c:otherwise>
 			</c:choose>
 
 
 
-			<form class="form-inline">
+			<!-- <form class="form-inline">
 				<input class="form-control mr-sm-2" type="text" placeholder="Search">
 				<button class="btn btn-success" type="submit">Search</button>
-			</form>
+			</form> -->
 		</div>
 	</nav>
 

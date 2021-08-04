@@ -28,7 +28,7 @@ public class UserApiController {
 		
 //		String encPassword = 
 		
-//		user.setRole(RoleType.USER);
+		user.setRole(RoleType.USER);
 		userService.회원가입(user);
 		
 		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
