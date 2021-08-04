@@ -13,11 +13,24 @@ public class BoardController {
 //	private PrincipalDetail principal;
 
 	// @AuthenticationPrincipal PrincipalDetail principal
+//    @GetMapping({"","/"})
+//    public String index(@AuthenticationPrincipal PrincipalDetail principal) { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+//    	// WEB-INF/views/index
+//    	
+//    	System.out.println("로그인 사용자 아이디: " + principal.getUsername());
+//        return "index";
+//    }
     @GetMapping({"","/"})
-    public String index(@AuthenticationPrincipal PrincipalDetail principal) { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+    public String index() { // 컨트롤러에서 principalDetail session 어떻게 찾나?
     	// WEB-INF/views/index
     	
-    	System.out.println("로그인 사용자 아이디: " + principal.getUsername());
+    	
         return "index";
+    }
+    // User 권한 필요
+    @GetMapping("/board/saveForm")
+    public String saveForm() {
+    	
+    	return "board/saveForm";
     }
 }

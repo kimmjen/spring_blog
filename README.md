@@ -1107,3 +1107,208 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 ```
 
 이 과정 후 localhost:8000 들어갔지만 principal is null 이 뜰 경우 localhost:8000/blog/auth/loginForm 들어가서 먼저 로그인
+
+## 13. 시큐리티 동작 원리
+
+1. 스프링 MVC request life cycle
+
+![a5](a5.png)
+
+2. filter와 Interceptor는 실행 시점이 다른다.
+
+Filter는 WebApplication에 등록 - web.xml  
+Interceptor는 Spring의 context에 등록
+
+3. Interceptor와 Filter의 차이
+
+Interceptor는 시큐리티가 나오기 전에 인증, 권한을 체크하는 훌륭한 도구로 사용.
+
+Interceptor는 AOP를 흉내낼 수 있다. handlerMethod를 제공하기 때문에 메서드의 전후 처리가 가능하다.
+
+4. Security
+
+security의 인증 절차는 필터 체인을 거쳐 dispatcherservlet으로 가지 전에 적용된다. 그리고 Security는 필터 체인을 통해서 걸러진 request요청을 Interceptor를 이용해서 전추 처리
+
+5. Security 인증 절차
+
+Security를 통한 로그인은 Authentication 객체의 모험(여행)이라고 생각하면 이해하기 쉽다.
+
+![a6](a6.png)
+
+6. [스프링 시큐리티 설정 파일참고](https://bamdule.tistory.com/53)
+
+## 14. 글쓰기 등록
+
+`BoardApiController.java`
+```java
+package org.kimmjen.blog.controller.api;
+
+import javax.servlet.http.HttpSession;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.kimmjen.blog.dto.ResponseDto;
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.service.UserService;
+import org.kimmjen.blog.service.BoardService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class BoardApiController {
+	
+	@Autowired
+	private BoardService boardService;
+	
+
+	@PostMapping("/auth/board")
+	public ResponseDto<Integer> save(@RequestBody Board board, @AuthenticationPrincipal PrincipalDetail principal) {
+		
+		boardService.글쓰기(board, principal.getUser());
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+
+	}
+
+}
+
+```
+
+`BoardRepository.java`
+```java
+package org.kimmjen.blog.repository;
+
+import java.util.Optional;
+
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+// DAO
+// 자동으로 bean등록이 된다
+// @Repository // 생략가능하다.
+public interface BoardRepository extends JpaRepository<Board, Integer> {
+	
+}
+
+```
+
+`BoardService.java`
+```java
+package org.kimmjen.blog.service;
+
+
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.BoardRepository;
+import org.kimmjen.blog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+
+@Service
+public class BoardService {
+	
+	@Autowired
+	private BoardRepository boardRepository;
+	
+	@Transactional
+	public void 글쓰기(Board board, User user) { // title, content, count
+		
+		board.setCount(0);
+		board.setUser(user);
+		boardRepository.save(board);
+	}
+}
+
+```
+
+`BoardController.java`
+```
+package org.kimmjen.blog.controller;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class BoardController {
+//	
+//	@Autowired
+//	private PrincipalDetail principal;
+
+	// @AuthenticationPrincipal PrincipalDetail principal
+//    @GetMapping({"","/"})
+//    public String index(@AuthenticationPrincipal PrincipalDetail principal) { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+//    	// WEB-INF/views/index
+//    	
+//    	System.out.println("로그인 사용자 아이디: " + principal.getUsername());
+//        return "index";
+//    }
+    @GetMapping({"","/"})
+    public String index() { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+    	// WEB-INF/views/index
+    	
+    	
+        return "index";
+    }
+    // User 권한 필요
+    @GetMapping("/board/saveForm")
+    public String saveForm() {
+    	
+    	return "board/saveForm";
+    }
+}
+
+```
+
+`board.js`
+```java
+let index = {
+	init: function() {
+		$("#btn-save").on("click", () => { 
+			this.save();
+		});
+	},
+
+	save: function() {
+		let data = {
+			title: $("#title").val(),
+			content: $("#content").val(),
+			// email: $("#email").val()
+		};
+		$.ajax({
+
+			type: "POST",
+			url: "/auth/board",
+			data: JSON.stringify(data),
+			contentType: "application/json; charset=utf-8",
+			dataType: "json" 
+
+		}).done(function(resp) {
+
+			alert("글쓰기가 등록되었습니다.");
+			
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}
+}
+
+index.init();
+```
