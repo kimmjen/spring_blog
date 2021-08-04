@@ -1,6 +1,8 @@
 package org.kimmjen.blog.service;
 
 
+import java.util.List;
+
 import org.kimmjen.blog.model.Board;
 import org.kimmjen.blog.model.RoleType;
 import org.kimmjen.blog.model.User;
@@ -24,5 +26,10 @@ public class BoardService {
 		board.setCount(0);
 		board.setUser(user);
 		boardRepository.save(board);
+	}
+	
+	public List<Board> 글목록() {
+		
+		return boardRepository.findAll();
 	}
 }
