@@ -1369,3 +1369,179 @@ $('.summernote').summernote({
 
 
 ```
+
+## 15. 글 목록 만들기
+
+- BoardController.java, BoardService.java, BoardApiController.java
+
+- board/ list.jsp, header.jsp
+
+`BoardController.java`
+```java
+package org.kimmjen.blog.controller;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.kimmjen.blog.service.BoardService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class BoardController {
+	
+	@Autowired
+	private BoardService boardService;
+//	
+//	@Autowired
+//	private PrincipalDetail principal;
+
+	// @AuthenticationPrincipal PrincipalDetail principal
+//    @GetMapping({"","/"})
+//    public String index(@AuthenticationPrincipal PrincipalDetail principal) { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+//    	// WEB-INF/views/index
+//    	
+//    	System.out.println("로그인 사용자 아이디: " + principal.getUsername());
+//        return "index";
+//    }
+    @GetMapping({"","/"})
+    public String index() { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+    	
+    	
+    	// WEB-INF/views/index
+        return "index";
+    }
+    
+    // User 권한 필요
+    @GetMapping("/board/saveForm")
+    public String saveForm() {
+    	
+    	return "board/saveForm";
+    }
+    
+ // User 권한 필요
+    @GetMapping("/board/list")
+    public String list(Model model) {
+    	
+    	model.addAttribute("boards", boardService.글목록());
+    	return "board/list";
+    }
+}
+
+```
+
+`BoardService.java`
+```java
+package org.kimmjen.blog.service;
+
+
+import java.util.List;
+
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.BoardRepository;
+import org.kimmjen.blog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+
+@Service
+public class BoardService {
+	
+	@Autowired
+	private BoardRepository boardRepository;
+	
+	@Transactional
+	public void 글쓰기(Board board, User user) { // title, content, count
+		
+		board.setCount(0);
+		board.setUser(user);
+		boardRepository.save(board);
+	}
+	
+	public List<Board> 글목록() {
+		
+		return boardRepository.findAll();
+	}
+}
+
+```
+
+`BoardApiController.java`
+```java
+package org.kimmjen.blog.controller.api;
+
+import javax.servlet.http.HttpSession;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.kimmjen.blog.dto.ResponseDto;
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.service.UserService;
+import org.kimmjen.blog.service.BoardService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class BoardApiController {
+	
+	@Autowired
+	private BoardService boardService;
+	
+
+	@PostMapping("/auth/board")
+	public ResponseDto<Integer> save(@RequestBody Board board, @AuthenticationPrincipal PrincipalDetail principal) {
+		
+		boardService.글쓰기(board, principal.getUser());
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+
+	}
+
+}
+
+```
+
+`list.jsp`
+```java
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ include file="../layout/header.jsp"%>
+
+<div class="container">
+
+		<h2>목록</h2>
+		<table class="table">
+			<thead class="thead-dark">
+				<tr>
+					<th>Title</th>
+					<th>Content</th>
+					<th>count</th>
+					<th>CreateDate</th>
+				</tr>
+			</thead>
+		<c:forEach var="board" items="${boards }">
+			<tbody>
+				<tr>
+					<td>${board.title}</td>
+					<td>${board.content}</td>
+					<td>${board.count}</td>
+					<td>${board.createDate}</td>
+				</tr>
+			</tbody>
+		</c:forEach>
+	</table>
+</div>
+<%@ include file="../layout/footer.jsp"%>
+
+
+```
