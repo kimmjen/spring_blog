@@ -1545,3 +1545,495 @@ public class BoardApiController {
 
 
 ```
+
+## 16. 글목록 페이징, 상세보기, 글 수정
+
+- 글 목록 페이징
+- 글 상세보기
+- 글 수정
+
+`BoardController.java`
+```java
+package org.kimmjen.blog.controller;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.kimmjen.blog.service.BoardService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@Controller
+public class BoardController {
+
+	@Autowired
+	private BoardService boardService;
+//	
+//	@Autowired
+//	private PrincipalDetail principal;
+
+	// @AuthenticationPrincipal PrincipalDetail principal
+//    @GetMapping({"","/"})
+//    public String index(@AuthenticationPrincipal PrincipalDetail principal) { // 컨트롤러에서 principalDetail session 어떻게 찾나?
+//    	// WEB-INF/views/index
+//    	
+//    	System.out.println("로그인 사용자 아이디: " + principal.getUsername());
+//        return "index";
+//    }
+	@GetMapping({ "", "/" })
+	public String index(Model model,
+			@PageableDefault(size = 2, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) { // 컨트롤러에서
+																											// principalDetail
+																											// session
+																											// 어떻게 찾나?
+
+		model.addAttribute("boards", boardService.글목록(pageable));
+		// WEB-INF/views/index
+		return "index";
+	}
+
+//    @GetMapping("/board/{id}")
+//    public String findById(@PathVariable int id) {
+//    	boardService.글상세보기(id);
+//    }
+	@GetMapping("/board/{id}")
+	public String findById(@PathVariable int id, Model model) {
+		model.addAttribute("board", boardService.글상세보기(id));
+
+		return "board/detail";
+	}
+
+	@GetMapping("/board/{id}/updateForm")
+	public String updateForm(@PathVariable int id, Model model) {
+		model.addAttribute("board", boardService.글상세보기(id));
+		return "board/updateForm";
+	}
+
+	// User 권한 필요
+	@GetMapping("/board/saveForm")
+	public String saveForm() {
+
+		return "board/saveForm";
+	}
+
+	// User 권한 필요
+//    @GetMapping("/board/list")
+//    public String list(Model model, @PageableDefault(size = 2, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+//    	
+//    	model.addAttribute("boards", boardService.글목록(pageable));
+//    	return "board/list";
+//    }
+}
+
+```
+
+`BoardService.java`
+```java
+package org.kimmjen.blog.service;
+
+import java.util.List;
+
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.BoardRepository;
+import org.kimmjen.blog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class BoardService {
+
+	@Autowired
+	private BoardRepository boardRepository;
+
+	@Transactional
+	public void 글쓰기(Board board, User user) { // title, content, count
+
+		board.setCount(0);
+		board.setUser(user);
+		boardRepository.save(board);
+	}
+
+//	public List<Board> 글목록() {
+//		
+//		return boardRepository.findAll();
+//	}
+
+	@Transactional(readOnly = true)
+	public Page<Board> 글목록(Pageable pageable) {
+
+		return boardRepository.findAll(pageable);
+	}
+
+	@Transactional(readOnly = true)
+	public Board 글상세보기(int id) {
+		return boardRepository.findById(id).orElseThrow(() -> {
+			return new IllegalArgumentException("글 상세보기 실패 : 아이디를 찾을 수 없습니다.");
+		});
+	}
+
+	@Transactional
+	public void 글삭제하기(int id) {
+		System.out.println("글삭제가 완료되었습니다." + id);
+		boardRepository.deleteById(id);
+	}
+
+	@Transactional
+	public void 글수정하기(int id, Board requestBoard) {
+		Board board = boardRepository.findById(id)
+				.orElseThrow(()->{
+					return new IllegalArgumentException("글 찾기 실패 : 아이디를 찾을 수 없습니다.");
+				}); // 영속화 완료
+		board.setTitle(requestBoard.getTitle());
+		board.setContent(requestBoard.getContent());
+		// 해당 함수로 종료시(Service가 종료될 때) 트랜잭션이 종료됩니다. 이때 더티체킹 - 자동 업데이트가 됨. db flush
+	}
+}
+
+```
+
+`BoardApiController.java`
+```java
+package org.kimmjen.blog.controller.api;
+
+import javax.servlet.http.HttpSession;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.kimmjen.blog.dto.ResponseDto;
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.service.UserService;
+import org.kimmjen.blog.service.BoardService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class BoardApiController {
+	
+	@Autowired
+	private BoardService boardService;
+	
+
+	@PostMapping("/api/board")
+	public ResponseDto<Integer> save(@RequestBody Board board, @AuthenticationPrincipal PrincipalDetail principal) {
+		
+		boardService.글쓰기(board, principal.getUser());
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+
+	}
+	
+	@DeleteMapping("/api/board/{id}")
+	public ResponseDto<Integer> deleteById(@PathVariable int id) {
+		
+		boardService.글삭제하기(id);
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+	}
+	
+	@PutMapping("/api/board/{id}")
+	public ResponseDto<Integer> update(@PathVariable int id, @RequestBody Board board){
+		System.out.println("BoardApiController : update : id : "+id);
+		System.out.println("BoardApiController : update : board : "+board.getTitle());
+		System.out.println("BoardApiController : update : board : "+board.getContent());
+		boardService.글수정하기(id, board);
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+	}
+
+}
+
+```
+
+`detail.jsp`
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+
+<%@ include file="../layout/header.jsp"%>
+
+<div class="container" style="margin-top: 30px;">
+
+	<h2>글 상세보기</h2>
+	<hr />
+	
+	<button class="btn btn-secondary" onclick="history.back()">돌아가기</button>
+	<c:if test="${board.user.id == principal.user.id }">
+		<a href="/board/${board.id }/updateForm" class="btn btn-warning">수정</a>
+		<button id="btn-delete" class="btn btn-danger">삭제</button>
+	</c:if>
+	<br /><br />
+	<div>
+		글 번호 : <span id="id"><i>${board.id }</i></span>
+		작성자 : <span><i>${board.user.username }</i></span>
+	</div>
+	
+	<div>
+		<label for="title">제목</label>
+		<h3>${board.title}</h3>
+	</div>
+	<br />
+	<div>
+		<label for="content">내용</label>
+		<div>${board.content }</div>
+	</div>
+	<br />
+	<!-- <div class="from-group">
+			<label for="">첨부파일</label> <input type="text" class="form-control">
+		</div> -->
+	<br />
+
+</div>
+
+<script src="/js/board.js"></script>
+<%@ include file="../layout/footer.jsp"%>
+
+
+```
+
+`updateForm.jsp`
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+
+<%@ include file="../layout/header.jsp"%>
+
+<div class="container">
+
+	<h2>글 수정하기</h2>
+	<br />
+
+	<form>
+		<input type="hidden" id="id" value="${board.id}" />
+		<div class="form-group">
+			<input value="${board.title}" type="text" class="form-control"
+				placeholder="Enter title" id="title">
+		</div>
+
+		<div class="form-group">
+			<textarea class="form-control summernote" rows="5" id="content">${board.content}</textarea>
+		</div>
+	</form>
+	<button id="btn-update" class="btn btn-primary">글수정완료</button>
+</div>
+
+<script>
+  $('.summernote').summernote({
+    tabsize: 2,
+    height: 300
+  });
+</script>
+<script src="/js/board.js"></script>
+<%@ include file="../layout/footer.jsp"%>
+```
+
+`index.jsp 수정`
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+
+<%@ include file="layout/header.jsp"%>
+
+<div class="container">
+
+	<c:forEach var="board" items="${boards.content}">
+		<div class="card m-2">
+			<div class="card-body">
+				<h4 class="card-title">${board.title }</h4>
+				<a href="/board/${board.id }" class="btn btn-primary">상세보기</a>
+			</div>
+		</div>
+	</c:forEach>
+	
+	<ul class="pagination justify-content-center">
+	
+	<c:choose>
+		<c:when test="${boards.first }">
+			<li class="page-item disable"><a class="page-link" href="?page=${boards.number-1}">Previous</a>
+		</c:when>
+		<c:otherwise>
+			<li class="page-item"><a class="page-link" href="?page=${boards.number-1}">Previous</a>
+		</c:otherwise>
+	</c:choose>
+	
+	<c:choose>
+		<c:when test="${boards.last }">
+			<li class="page-itemdisable"><a class="page-link" href="?page=${boards.number+1}">Next</a>
+		</c:when>
+		<c:otherwise>
+			<li class="page-item-disable"><a class="page-link" href="?page=${boards.number+1}">Next</a>
+		</c:otherwise>
+	</c:choose>
+
+
+	<!-- <div class="card m-2">
+		<div class="card-body">
+			<h4 class="card-title">제목 적는 부분</h4>
+			<a href="#" class="btn btn-primary">상세보기</a>
+		</div>
+	</div>
+
+	<div class="card m-2">
+		<div class="card-body">
+			<h4 class="card-title">제목 적는 부분</h4>
+			<a href="#" class="btn btn-primary">상세보기</a>
+		</div>
+	</div> -->
+
+</div>
+
+<%@ include file="layout/footer.jsp"%>
+
+```
+
+`board.js`
+```javascript
+let index = {
+	init: function() {
+		$("#btn-save").on("click", () => {
+			this.save();
+		});
+		$("#btn-delete").on("click", () => {
+			this.deleteById();
+		});
+		$("#btn-update").on("click", () => {
+			this.update();
+		});
+	},
+
+	save: function() {
+		let data = {
+			title: $("#title").val(),
+			content: $("#content").val(),
+			// email: $("#email").val()
+		};
+		$.ajax({
+
+			type: "POST",
+			url: "/api/board",
+			data: JSON.stringify(data),
+			contentType: "application/json; charset=utf-8",
+			dataType: "json"
+
+		}).done(function(resp) {
+
+			alert("글쓰기가 등록되었습니다.");
+
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	},
+	deleteById: function() {
+		let id = $("#id").text();
+
+		$.ajax({
+			type: "DELETE",
+			url: "/api/board/" + id,
+			dataType: "json"
+		}).done(function(resp) {
+			alert("삭제가 완료되었습니다.");
+			location.href = "/";
+		}).fail(function(error) {
+			alert(JSON.stringify(error));
+		});
+	},
+	update: function() {
+		let id = $("#id").val();
+
+		let data = {
+			title: $("#title").val(),
+			content: $("#content").val()
+		};
+
+		$.ajax({
+			type: "PUT",
+			url: "/api/board/" + id,
+			data: JSON.stringify(data),
+			contentType: "application/json; charset=utf-8",
+			dataType: "json"
+		}).done(function(resp) {
+			alert("글수정이 완료되었습니다.");
+			location.href = "/";
+		}).fail(function(error) {
+			alert(JSON.stringify(error));
+		});
+	}
+
+	/*deleteById: function() {
+		
+		let id = $("#id").text();
+		
+
+		$.ajax({
+
+			type: "DELETE",
+			url: "/auth/board/" + id,
+			dataType: "json",
+			contentType: "application/json; charset=utf-8"
+
+		}).done(function(resp) {
+
+			alert("삭제가 완료되었습니다.");
+			
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}*/
+	
+	/*update: function() {
+		
+		let id = $("#id").val();
+		
+		let data = {
+			title: $("#title").val(),
+			content: $("#content").val(),
+			// email: $("#email").val()
+		};
+		$.ajax({
+
+			type: "PUT",
+			url: "/api/board/" + id,
+			data: JSON.stringify(data),
+			contentType: "application/json; charset=utf-8",
+			dataType: "json"
+
+		}).done(function(resp) {
+
+			alert("글 수정이 완료되었습니다.");
+
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}*/
+}
+
+index.init();
+```
