@@ -1,8 +1,10 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
 <%@ include file="../layout/header.jsp"%>
 
 <div class="container">
+
+	<h2>로그인화면</h2>
 	<form action="/auth/loginProc" method="post">
 		<div class="form-group">
 			<label for="username">Username</label> 
@@ -19,7 +21,5 @@
 	
 
 </div>
-
+<script src="../js/user.js"></script>
 <%@ include file="../layout/footer.jsp"%>
-
-

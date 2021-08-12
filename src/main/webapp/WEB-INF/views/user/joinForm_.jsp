@@ -1,8 +1,9 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
 <%@ include file="../layout/header.jsp"%>
 
 <div class="container">
+	<h2> 외원가입 화면</h2>
 	<form>
 		<div class="form-group">
 			<label for="username">Username</label> 
@@ -26,5 +27,3 @@
 
 <script src="../js/user.js"></script>
 <%@ include file="../layout/footer.jsp"%>
-
-
