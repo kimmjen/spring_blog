@@ -5,7 +5,7 @@
 	uri="http://www.springframework.org/security/tags"%>
 
 <sec:authorize access="isAuthenticated()">
-	<sec:authentication property="principal" var="principal"/>
+	<sec:authentication property="principal" var="principal"/> <!-- 세션, principal => principalDetail이다.  -->
 </sec:authorize>
 
 <!DOCTYPE html>

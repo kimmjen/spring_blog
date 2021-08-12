@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,6 +34,15 @@ public class UserApiController {
 		
 		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
 		// 자바오브젝트를 JSON으로 변환해서 리턴(Jackson)
+	}
+	
+	@PutMapping("/user")
+	// RequestBody를 쓰는이유는 json 파일이용하기 때문에 requestbody가 없으면 key=value값만, x-www-form-urlencoded
+	public ResponseDto<Integer> update(@RequestBody User user) {
+		
+		userService.회원수정(user);
+		
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
 	}
 
 //	@PostMapping("/api/user")

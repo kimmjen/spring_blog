@@ -2037,3 +2037,359 @@ let index = {
 
 index.init();
 ```
+
+## 17. 회원수정
+- 회원 수정을 통해 DB값만 변경
+- session 값까지 변경(spring security)
+
+
+(1). 회원 수정을 통해 DB값만 변경
+
+`UserController.java`
+```java
+package org.kimmjen.blog.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class UserController {
+	
+	// auth 붙이는 이유 : 인증이 안된 사용자들이 출입할 수 있는 경로를 /auth/** 허용
+	// 그녕 주소가 / 이면 index.jsp 허용
+	// static 이하에 있는 /js/**, /css/**, /image/**
+	@GetMapping("auth/joinForm")
+	public String joinForm() {
+		
+		return "user/joinForm";
+	}
+	
+	@GetMapping("auth/loginForm")
+	public String loginForm() {
+		
+		return "user/loginForm";
+	}
+	
+	@GetMapping("/user/updateForm")
+	public String updateForm() {
+		return "user/updateForm";
+	}
+
+}
+
+```
+> GetMapping을 통해 user/updateForm
+
+`UseApiController.java`
+```java
+package org.kimmjen.blog.controller.api;
+
+import javax.servlet.http.HttpSession;
+
+import org.kimmjen.blog.dto.ResponseDto;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class UserApiController {
+	
+	@Autowired
+	private UserService userService;
+	
+	// 
+	@PostMapping("/auth/joinProc")
+	public ResponseDto<Integer> save(@RequestBody User user) {// username, password, email
+		
+		System.out.println("UserApiController : save 호출됨");
+		// 실제로 DB에 insert를 하고 아래에서 return 이 되면 된다.
+		
+//		String encPassword = 
+		
+		user.setRole(RoleType.USER);
+		userService.회원가입(user);
+		
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+		// 자바오브젝트를 JSON으로 변환해서 리턴(Jackson)
+	}
+	
+	@PutMapping("/user")
+	// RequestBody를 쓰는이유는 json 파일이용하기 때문에 requestbody가 없으면 key=value값만, x-www-form-urlencoded
+	public ResponseDto<Integer> update(@RequestBody User user) {
+		
+		userService.회원수정(user);
+		
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+	}
+
+//	@PostMapping("/api/user")
+//	public int save(@RequestBody User user) {
+//		
+//		System.out.println("UserApiController : save 호출됨");
+//		return 1;
+//	}
+//	@Autowired
+//	private HttpSession session;
+	
+	
+//	@PostMapping("/api/user/login")
+//	public ResponseDto<Integer> login(@RequestBody User user, HttpSession session) {
+//		
+//		System.out.println("UserApiController : login 호출됨");
+//		
+//		User principal = userService.로그인(user); // principal(접근주체)
+//		
+//		if(principal != null) {
+//			session.setAttribute("principal", principal);
+//		}
+//		
+//		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+//	}
+}
+
+```
+
+> PutMapping을 통해
+
+`UserService.java`
+```java
+package org.kimmjen.blog.service;
+
+
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+
+// 스프링이 컴포넌트 스캔을 통해서 bean에 등록을 해줌. IOC를 해준다.
+@Service
+public class UserService {
+	
+	@Autowired
+	private UserRepository userRepository;
+	
+	@Autowired
+	private BCryptPasswordEncoder encoder;
+	
+	@Transactional
+	public void 회원가입(User user) {
+		String rawPassword = user.getPassword(); //1234 원문
+		String encPassword = encoder.encode(rawPassword); // 해쉬
+		user.setPassword(encPassword);
+		user.setRole(RoleType.USER);
+		userRepository.save(user);
+	}
+	
+	@Transactional
+	public void 회원수정(User user) { // 외부로부터 받은 user
+		// 수정시에는 영속성 컨텍스트 내의 User 오브젝트를 영속화 시키고, 영속화된 User 오브젝트를 수정
+		// select를 해서 User 오브젝트를 DB로부터 가져오는 이유는 영속화를 하기 위해서
+		// 영속화를 하면 영속화된 오브젝트를 변경하게 되면 자동으로 DB에 업데이트 값을 자동으로 보내기 때문.
+		
+		User persistence = userRepository.findById(user.getId()).orElseThrow(() -> {
+			return new IllegalArgumentException("회원 찾기 실패");
+		});
+		String rawPassword = user.getPassword();
+		String encPassword = encoder.encode(rawPassword);
+		persistence.setPassword(encPassword);
+		persistence.setEmail(user.getEmail());
+		
+		// 위와 같은 함수가 끝이나면 끝날때 회원 수정 함수 종료시라는 것은 서비스가 종료된다는 것과 같다.
+		// 서비스 종료시는 트랜잭션이 종료 된다는 것이고 commit 이 자동으로 된다라는 의미.
+		// commit이 자동으로 된다는 것은 영속화된 persistence객체의 변화가 감지되면 더티체킹이 되어 변환된 것들을 update문을 날려준다(자동으로)
+		
+	}
+//		t
+	
+//	@Transactional
+//	public void 회원가입(User user) {
+//		userRepository.save(user);
+//	}
+	
+	
+//		try {
+//			userRepository.save(user);
+//			
+//			return 1;
+//			
+//		} catch (Exception e) {
+//			
+//			e.printStackTrace();
+//			System.out.println("UserService: 회원가입() : " + e.getMessage());
+//			
+//		}
+//		return -1;
+	
+//	@Transactional(readOnly = true) // select 할때 트랜잭션 시작, 서비스 종료될 때 트랜잭션 종료(정합성 유지)
+//	public User 로그인(User user) {
+//		return userRepository.findByUsernameAndPassword(user.getUsername(), user.getPassword());
+//	}
+//	//@Transactional
+//	// public User 로그인(User user) {
+//	//	return userRepository.findByUsernameAndPassword(user.getUsername(), user.getPassword());
+//	//}
+}
+
+```
+
+> 회원 수정
+
+`User.js`
+```javascript
+let index = {
+	init: function() {
+		$("#btn-save").on("click", () => { //function(){}, () => {} this를 바인딩하기 위해서!!
+			this.save();
+		});
+		/*$("#btn-login").on("click", () => { //function(){}, () => {} this를 바인딩하기 위해서!!
+			this.login();
+		});*/
+		$("#btn-update").on("click", () => { 
+			this.update();
+		});
+	},
+
+	save: function() {
+		//alert('user의 save함수 호출됨');
+		let data = {
+			username: $("#username").val(),
+			password: $("#password").val(),
+			email: $("#email").val()
+		};
+		//console.log(data);
+
+		// ajax 호출시 default가 비동기 호출
+		// ajax 통신을 이용해서 3개의 데이터를 json으로 변경하여 insert 요청!!
+		// ajax가 통신을 성공하고 서버가 json을 리턴해주면 자동으로 자바 오브젝트로 변환해준다.
+		$.ajax({
+
+			type: "POST",
+			url: "/auth/joinProc",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("회원가입이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	},
+	
+	update: function() {
+		
+		let data = {
+			id: $("#id").val(),
+			password: $("#password").val(),
+			email: $("#email").val()
+		};
+		$.ajax({
+
+			type: "PUT",
+			url: "/user",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("회원수정이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}
+	/*login: function() {
+		//alert('user의 save함수 호출됨');
+		let data = {
+			username: $("#username").val(),
+			password: $("#password").val(),
+		};
+
+		$.ajax({
+
+			type: "POST",
+			url: "/api/user/login",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("로그인이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}*/
+}
+
+index.init();
+```
+
+> btn-update
+
+`/user/updateForm.jsp`
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+
+<%@ include file="../layout/header.jsp"%>
+
+<div class="container">
+	<form>
+	<input type="hidden" id="id" value="${principal.user.id }" />
+		<div class="form-group">
+			<label for="username">Username</label> 
+			<input type="text" value="${princial.user.username }" class="form-control" placeholder="Enter username" id="username" readonly>
+			<!-- readOnly 수정 못하게  -->
+		</div>
+		
+		<div class="form-group">
+			<label for="password">Password</label> 
+			<input type="password" <%-- value="${princial.user.password }" --%> class="form-control" placeholder="Enter password" id="password">
+		</div>
+		
+		<div class="form-group">
+			<label for="email">Email</label> 
+			<input type="email" value="${princial.user.email }" class="form-control" placeholder="Enter email" id="email">
+		</div>
+		
+	</form>
+	<button id="btn-update" class="btn btn-primary">회원수정완료</button>
+
+</div>
+
+<script src="../js/user.js"></script>
+<%@ include file="../layout/footer.jsp"%>
+
+```
+
+> input값과 readOnly를 이용하영 값 변경 안시킴.
