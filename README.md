@@ -2393,3 +2393,223 @@ index.init();
 ```
 
 > input값과 readOnly를 이용하영 값 변경 안시킴.
+
+(2) session 값까지 변경(spring security)
+
+![a6.png](a6.png)
+
+이 과정은 10번에 해당한다.
+
+그림에 UserDetailService는 내가 만든 [PrincipalDetailService](#시큐리티-최종작업)에해당.
+
+`UserApiController.java`
+```java
+package org.kimmjen.blog.controller.api;
+
+import javax.servlet.http.HttpSession;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.kimmjen.blog.dto.ResponseDto;
+import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class UserApiController {
+	
+	@Autowired
+	private UserService userService;
+	
+	@Autowired
+	private AuthenticationManager authenticationManager;
+		
+	// 
+	@PostMapping("/auth/joinProc")
+	public ResponseDto<Integer> save(@RequestBody User user) {// username, password, email
+		
+		System.out.println("UserApiController : save 호출됨");
+		// 실제로 DB에 insert를 하고 아래에서 return 이 되면 된다.
+		
+//		String encPassword = 
+		
+		user.setRole(RoleType.USER);
+		userService.회원가입(user);
+		
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+		// 자바오브젝트를 JSON으로 변환해서 리턴(Jackson)
+	}
+	
+	@PutMapping("/user")
+	// RequestBody를 쓰는이유는 json 파일이용하기 때문에 requestbody가 없으면 key=value값만, x-www-form-urlencoded
+	public ResponseDto<Integer> update(@RequestBody User user) {
+		
+		userService.회원수정(user);
+		// 트랜잭션이 종료되기 때문에 DB에 값은 변경 되었으나 세션값은 변경되지 않은 상태이기 때문에 직접 session 값설정을 해줘야한다.
+		// 세션값 변경 방법.
+		
+		// 세션등록
+		
+		Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+		SecurityContextHolder.getContext().setAuthentication(authentication);
+		
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+		// 강제로 세션값 변경해줌 아래 코드
+//		Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+//		SecurityContext securityContext = SecurityContextHolder.getContext();
+//		securityContext.setAuthentication(authentication);
+//		session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
+//		
+//		
+	}
+
+//	@PostMapping("/api/user")
+//	public int save(@RequestBody User user) {
+//		
+//		System.out.println("UserApiController : save 호출됨");
+//		return 1;
+//	}
+//	@Autowired
+//	private HttpSession session;
+	
+	
+//	@PostMapping("/api/user/login")
+//	public ResponseDto<Integer> login(@RequestBody User user, HttpSession session) {
+//		
+//		System.out.println("UserApiController : login 호출됨");
+//		
+//		User principal = userService.로그인(user); // principal(접근주체)
+//		
+//		if(principal != null) {
+//			session.setAttribute("principal", principal);
+//		}
+//		
+//		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+//	}
+}
+
+```
+
+`user.js`
+```java
+let index = {
+	init: function() {
+		$("#btn-save").on("click", () => { //function(){}, () => {} this를 바인딩하기 위해서!!
+			this.save();
+		});
+		/*$("#btn-login").on("click", () => { //function(){}, () => {} this를 바인딩하기 위해서!!
+			this.login();
+		});*/
+		$("#btn-update").on("click", () => {
+			this.update();
+		});
+	},
+
+	save: function() {
+		//alert('user의 save함수 호출됨');
+		let data = {
+			username: $("#username").val(),
+			password: $("#password").val(),
+			email: $("#email").val()
+		};
+		//console.log(data);
+
+		// ajax 호출시 default가 비동기 호출
+		// ajax 통신을 이용해서 3개의 데이터를 json으로 변경하여 insert 요청!!
+		// ajax가 통신을 성공하고 서버가 json을 리턴해주면 자동으로 자바 오브젝트로 변환해준다.
+		$.ajax({
+
+			type: "POST",
+			url: "/auth/joinProc",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("회원가입이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	},
+
+	update: function() {
+
+		let data = {
+			id: $("#id").val(),
+			username: $("#username").val(),
+			password: $("#password").val(),
+			email: $("#email").val()
+		};
+		$.ajax({
+
+			type: "PUT",
+			url: "/user",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("회원수정이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}
+	/*login: function() {
+		//alert('user의 save함수 호출됨');
+		let data = {
+			username: $("#username").val(),
+			password: $("#password").val(),
+		};
+
+		$.ajax({
+
+			type: "POST",
+			url: "/api/user/login",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("로그인이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}*/
+}
+
+index.init();
+```
+> 이전에는 let data에서 username안불러왔지만 여기서는 부름

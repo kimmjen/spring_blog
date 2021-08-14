@@ -5,6 +5,10 @@ import org.kimmjen.blog.model.RoleType;
 import org.kimmjen.blog.model.User;
 import org.kimmjen.blog.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +46,8 @@ public class UserService {
 		String encPassword = encoder.encode(rawPassword);
 		persistence.setPassword(encPassword);
 		persistence.setEmail(user.getEmail());
+		
+
 		
 		// 위와 같은 함수가 끝이나면 끝날때 회원 수정 함수 종료시라는 것은 서비스가 종료된다는 것과 같다.
 		// 서비스 종료시는 트랜잭션이 종료 된다는 것이고 commit 이 자동으로 된다라는 의미.

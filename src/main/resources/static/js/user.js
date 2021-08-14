@@ -6,7 +6,7 @@ let index = {
 		/*$("#btn-login").on("click", () => { //function(){}, () => {} this를 바인딩하기 위해서!!
 			this.login();
 		});*/
-		$("#btn-update").on("click", () => { 
+		$("#btn-update").on("click", () => {
 			this.update();
 		});
 	},
@@ -44,11 +44,12 @@ let index = {
 
 		});
 	},
-	
+
 	update: function() {
-		
+
 		let data = {
 			id: $("#id").val(),
+			username: $("#username").val(),
 			password: $("#password").val(),
 			email: $("#email").val()
 		};

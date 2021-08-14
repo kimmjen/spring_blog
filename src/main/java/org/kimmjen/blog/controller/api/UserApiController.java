@@ -2,12 +2,19 @@ package org.kimmjen.blog.controller.api;
 
 import javax.servlet.http.HttpSession;
 
+import org.kimmjen.blog.config.auth.PrincipalDetail;
 import org.kimmjen.blog.dto.ResponseDto;
 import org.kimmjen.blog.model.RoleType;
 import org.kimmjen.blog.model.User;
 import org.kimmjen.blog.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,6 +27,9 @@ public class UserApiController {
 	@Autowired
 	private UserService userService;
 	
+	@Autowired
+	private AuthenticationManager authenticationManager;
+		
 	// 
 	@PostMapping("/auth/joinProc")
 	public ResponseDto<Integer> save(@RequestBody User user) {// username, password, email
@@ -41,8 +51,22 @@ public class UserApiController {
 	public ResponseDto<Integer> update(@RequestBody User user) {
 		
 		userService.회원수정(user);
+		// 트랜잭션이 종료되기 때문에 DB에 값은 변경 되었으나 세션값은 변경되지 않은 상태이기 때문에 직접 session 값설정을 해줘야한다.
+		// 세션값 변경 방법.
+		
+		// 세션등록
+		
+		Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+		SecurityContextHolder.getContext().setAuthentication(authentication);
 		
 		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+		// 강제로 세션값 변경해줌 아래 코드
+//		Authentication authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+//		SecurityContext securityContext = SecurityContextHolder.getContext();
+//		securityContext.setAuthentication(authentication);
+//		session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
+//		
+//		
 	}
 
 //	@PostMapping("/api/user")
