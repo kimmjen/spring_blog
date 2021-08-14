@@ -2613,3 +2613,70 @@ let index = {
 index.init();
 ```
 > 이전에는 let data에서 username안불러왔지만 여기서는 부름
+
+## 18. 댓글 
+- 댓글 디자인
+`detail.jsp`
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+
+<%@ include file="../layout/header.jsp"%>
+
+<div class="container" style="margin-top: 30px;">
+
+	<h2>글 상세보기</h2>
+	<hr />
+
+	<button class="btn btn-secondary" onclick="history.back()">돌아가기</button>
+	<c:if test="${board.user.id == principal.user.id }">
+		<a href="/board/${board.id}/updateForm" class="btn btn-warning">수정</a>
+		<button id="btn-delete" class="btn btn-danger">삭제</button>
+	</c:if>
+	<br /> <br />
+	<div>
+		글 번호 : <span id="id"><i>${board.id}</i></span> 작성자 : <span><i>${board.user.username}</i></span>
+	</div>
+
+	<div>
+		<label for="title">제목</label>
+		<h3>${board.title}</h3>
+	</div>
+	<br />
+	<div>
+		<label for="content">내용</label>
+		<div>${board.content}</div>
+	</div>
+	<br />
+
+	<div class="card">
+
+		<div class="card-body">
+			<textarea class="form-control" rows="1"></textarea>
+		</div>
+		<div class="card-footer">
+			<button class="btn btn-primary">등록</button>
+		</div>
+	</div>
+	<br />
+	<div class="card">
+		<div class="header">댓글리스트</div>
+		<ul id="comment--box" class="list-group">
+			<li id="comment-1"
+				class="list-group-item d-flex justify-content-between">
+				<div>댓글 내용</div>
+				<div class="d-flex">
+					<div class="font-italic">작성자 : test01 &nbsp;</div>
+					<button>삭제</button>
+				</div>
+			</li>
+		</ul>
+	</div>
+
+</div>
+
+<script src="/js/board.js"></script>
+<%@ include file="../layout/footer.jsp"%>
+
+
+```
