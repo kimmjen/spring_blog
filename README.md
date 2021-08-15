@@ -2616,9 +2616,13 @@ index.init();
 
 ## 18. 댓글 
 
-- 댓글 디자인
-- 댓글 목록
-- 댓글 작성
+- [댓글 디자인](#댓글-디자인)
+- [댓글 목록](#댓글-목록)
+- [댓글 작성](#댓글-작성)
+- [댓글 작성시](#댓글-작성시)
+- [Autowired의 원리](#Autowired의-원리)
+
+댓글 디자인
 
 `detail.jsp`
 ```jsp
@@ -2685,7 +2689,7 @@ index.init();
 
 ```
 
-[댓글목록](#댓글-목록)
+댓글 목록
 
 `mysql`
 ```mysql
@@ -2881,7 +2885,7 @@ public interface ReplyRepository extends JpaRepository<Reply, Integer>{
 
 ```
 
-[댓글 작성](#댓글-작성)
+댓글 작성
 
 `BoardService.java`
 ```java
@@ -3382,3 +3386,244 @@ public class Board {
 }
 
 ```
+
+댓글 작성시
+(네이티브 쿼리 사용)
+
+`BoardService.java`
+```java
+package org.kimmjen.blog.service;
+
+import org.kimmjen.blog.dto.ReplySaveRequestDto;
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.Reply;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.BoardRepository;
+import org.kimmjen.blog.repository.ReplyRepository;
+import org.kimmjen.blog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class BoardService {
+
+	@Autowired
+	private BoardRepository boardRepository;
+	
+	@Autowired
+	private ReplyRepository replyRepository;
+	
+	@Autowired
+	private UserRepository userRepository;
+
+	@Transactional
+	public void 글쓰기(Board board, User user) { // title, content, count
+
+		board.setCount(0);
+		board.setUser(user);
+		boardRepository.save(board);
+	}
+
+//	public List<Board> 글목록() {
+//		
+//		return boardRepository.findAll();
+//	}
+
+	@Transactional(readOnly = true)
+	public Page<Board> 글목록(Pageable pageable) {
+
+		return boardRepository.findAll(pageable);
+	}
+
+	@Transactional(readOnly = true)
+	public Board 글상세보기(int id) {
+		return boardRepository.findById(id).orElseThrow(() -> {
+			return new IllegalArgumentException("글 상세보기 실패 : 아이디를 찾을 수 없습니다.");
+		});
+	}
+
+	@Transactional
+	public void 글삭제하기(int id) {
+		System.out.println("글삭제가 완료되었습니다." + id);
+		boardRepository.deleteById(id);
+	}
+
+	@Transactional
+	public void 글수정하기(int id, Board requestBoard) {
+		Board board = boardRepository.findById(id)
+				.orElseThrow(()->{
+					return new IllegalArgumentException("글 찾기 실패 : 아이디를 찾을 수 없습니다.");
+				}); // 영속화 완료
+		board.setTitle(requestBoard.getTitle());
+		board.setContent(requestBoard.getContent());
+		// 해당 함수로 종료시(Service가 종료될 때) 트랜잭션이 종료됩니다. 이때 더티체킹 - 자동 업데이트가 됨. db flush
+	}
+	
+	@Transactional
+	public void 댓글쓰기(ReplySaveRequestDto replySaveRequestDto) {
+		
+//		User user = userRepository.findById(replySaveRequestDto.getUserId()).orElseThrow(()->{
+//			return new IllegalArgumentException("댓글 쓰기 실패 : 유저id를 찾을 수 없습니다.");
+//		});
+//		
+//		Board board = boardRepository.findById(replySaveRequestDto.getBoardId()).orElseThrow(()->{
+//			return new IllegalArgumentException("댓글 쓰기 실패 : 게시글id를 찾을 수 없습니다.");
+//		});
+//		
+//		Reply reply = Reply.builder()
+//				.user(user)
+//				.board(board)
+//				.content(replySaveRequestDto.getContent())
+//				.build();
+		
+//		Reply reply = new Reply();
+//		reply.update(user, board, replySaveRequestDto.getContent());
+		
+		
+//		replyRepository.mSave(replySaveRequestDto);
+		int result = replyRepository.mSave(replySaveRequestDto.getUserId(), replySaveRequestDto.getBoardId(), replySaveRequestDto.getContent());
+//		System.out.println("BoardService : " + result);
+//		System.out.println(result); // 오브젝트를 출력하게 되면 자동으로 toString() 이 호출됨.
+	}
+	
+}
+
+```
+
+`ReplyRepository.java`
+```java
+package org.kimmjen.blog.repository;
+
+import javax.transaction.Transactional;
+
+import org.kimmjen.blog.model.Reply;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+
+public interface ReplyRepository extends JpaRepository<Reply, Integer>{
+	
+//	@Transactional
+	@Modifying
+	@Query(value = "INSERT INTO reply(userId, boardId, content, createDate) VALUES(?1, ?2, ?3, noew())", nativeQuery = true)
+//	void mSave(ReplySaveRequestDto replySaveRequestDto);
+	int mSave(int userId, int boardId, String content); // 업데이트된 행의 개수를 리턴
+	
+//	@Modifying
+//    @Query(value="INSERT INTO reply(content, boardId, userId, createDate) VALUES(?1, ?2, ?3, now())", nativeQuery = true)
+//    void nativeInsertReply(String content, int boardId, int userId);
+	
+//	@Modifying
+//    @Query(value="INSERT INTO reply(content, boardId, userId, createDate) VALUES(:content, :boardId, :userId, now())", nativeQuery = true)
+//    int nativeInsertReply(String content, int boardId, int userId);
+}
+
+```
+
+> Modifying, Query
+
+`Reply.java`
+```java
+package org.kimmjen.blog.model;
+
+import java.sql.Timestamp;
+import java.util.List;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.kimmjen.blog.dto.ReplySaveRequestDto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+@Entity
+public class Reply {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int id;
+	
+	@Column(length = 200, nullable = false)
+	private String content;
+	
+	@ManyToOne
+	@JoinColumn(name = "boardId")
+	private Board board;
+	
+	@ManyToOne
+	@JoinColumn(name = "userId")
+	private User user;
+	
+	/*
+	 * @OneToMany(mappedBy = "board", fetch = FetchType.EAGER)//mappedBy 연관관계 주인
+	 * 아니다. DB에 칼럼 만들지 말기. private List<Reply> reply;
+	 */
+	
+	@CreationTimestamp
+	private Timestamp createDate;
+
+	@Override
+	public String toString() {
+		return "Reply [id=" + id + ", content=" + content + ", board=" + board + ", user=" + user + ", createDate="
+				+ createDate + "]";
+	}
+	
+	
+	
+//	public void update(User user, Board board, String content) {
+//		
+//		setUser(user);
+//		setBoard(board);
+//		setContent(content);
+//		
+//	}
+
+}
+
+```
+
+`ReplyObjectTest.java`
+```java
+package org.kimmjen.guest;
+
+import org.junit.jupiter.api.Test;
+import org.kimmjen.blog.model.Reply;
+
+public class ReplyObjectTest {
+
+	@Test
+	public void 투스트링테스트() {
+		Reply reply = Reply.builder()
+				.id(1)
+				.user(null)
+				.board(null)
+				.content("안녕")
+				.build();
+		
+		System.out.println(reply); // 오브젝트 출력시에 toString이 자동 호출됨
+	}
+}
+
+```
+
+> toString 테스트
+
+Autowired의 원리
