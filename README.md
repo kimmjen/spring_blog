@@ -3744,25 +3744,226 @@ public class BoardService {
 
 회원가입문제와 게시글삭제문제
 
-``
+`user.js`
+```javascript
+let index = {
+	init: function() {
+		$("#btn-save").on("click", () => { //function(){}, () => {} this를 바인딩하기 위해서!!
+			this.save();
+		});
+		/*$("#btn-login").on("click", () => { //function(){}, () => {} this를 바인딩하기 위해서!!
+			this.login();
+		});*/
+		$("#btn-update").on("click", () => {
+			this.update();
+		});
+	},
+
+	save: function() {
+		//alert('user의 save함수 호출됨');
+		let data = {
+			username: $("#username").val(),
+			password: $("#password").val(),
+			email: $("#email").val()
+		};
+		//console.log(data);
+
+		// ajax 호출시 default가 비동기 호출
+		// ajax 통신을 이용해서 3개의 데이터를 json으로 변경하여 insert 요청!!
+		// ajax가 통신을 성공하고 서버가 json을 리턴해주면 자동으로 자바 오브젝트로 변환해준다.
+		$.ajax({
+
+			type: "POST",
+			url: "/auth/joinProc",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			if (resp.status === 500) {
+				alert("회원가입에 실패하였습니다.");
+			} else {
+				alert("회원가입이 완료되었습니다.");
+				location.href = "/";
+			}
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	},
+
+	update: function() {
+
+		let data = {
+			id: $("#id").val(),
+			username: $("#username").val(),
+			password: $("#password").val(),
+			email: $("#email").val()
+		};
+		$.ajax({
+
+			type: "PUT",
+			url: "/user",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("회원수정이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}
+	/*login: function() {
+		//alert('user의 save함수 호출됨');
+		let data = {
+			username: $("#username").val(),
+			password: $("#password").val(),
+		};
+
+		$.ajax({
+
+			type: "POST",
+			url: "/api/user/login",
+			data: JSON.stringify(data), // http body데이터
+			contentType: "application/json; charset=utf-8", // body데이터가 어떤 타입인지(MIME)
+			dataType: "json" // 요청을 서버로 해서 응답이 왔을 때 기본적으로 모든 것이 문자열 (생긴게 json이라면) => javascript오브젝트로 변경
+
+			// 회원가입 수행 요청(100초 가정)
+		}).done(function(resp) {
+
+			alert("로그인이 완료되었습니다.");
+			// console.log(resp);
+			location.href = "/";
+
+		}).fail(function(error) {
+
+			alert(JSON.stringify(error));
+
+		});
+	}*/
+}
+
+index.init();
+```
+
+> 회원가입 시 같은 아이디 회원가입 if
+
+`GlobalExceptionHandler.java`
 ```java
+package org.kimmjen.blog.handle;
+
+import org.kimmjen.blog.dto.ResponseDto;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
+
+@ControllerAdvice
+@RestController
+public class GlobalExceptionHandler {
+
+	@ExceptionHandler(value = Exception.class)
+	public ResponseDto<String> handleArgumentException(Exception e) {
+
+		return new ResponseDto<String>(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
+	}
+
+//    @ExceptionHandler(value = IllegalArgumentException.class)
+//    public ResponseDto<String> handleArgumentException(IllegalArgumentException e) {
+//
+//        return new ResponseDto<String>(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
+//    }
+
+	// @ExceptionHandler(value = Exception.class)
+	// public String handleArgumentException(Exception e) {
+	// return "<h1>" + e.getMessage() + "</h1>";
+	// }
+
+}
 
 ```
 
-``
+`Board.java`
 ```java
+package org.kimmjen.blog.model;
+
+import java.sql.Timestamp;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
+
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Board {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY) // auto_increment
+	private int id;
+	
+	@Column(length = 100, nullable = false)
+	private String title;
+	
+//	@Column(length = )
+	@Lob // 대용량 데이터
+	private String content; // 섬머노트 라이브러리 <html>태크가 섞여서 디자인이 됨
+	
+	private int count; // 조회수
+	
+	@ManyToOne(fetch = FetchType.EAGER) // 연관관계만들어준다. Board(Many) To User(One) 한명의 유저는 여러개의 게시글을 쓸 수 있다. <-> OneToMany
+	@JoinColumn(name="userId")
+	private User user; // DB는 오브젝트를 저장할 수 없다. FK, 자바는 오브젝트를 저장할 수 있다.
+	// user는 FK가 된다.
+	
+	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER, cascade = CascadeType.REMOVE)// mappedBy 연관관계의 주인이 아니다. (난 Fk가 아니다)
+//	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)/
+	@JsonIgnoreProperties({"board"})
+	@OrderBy("id desc")
+	private List<Reply> replys;
+	
+	@CreationTimestamp // 자동 값 입력
+	private Timestamp createDate;
+
+}
 
 ```
 
-``
-```java
-
-```
-
-``
-```java
-
-```
+> cascade 사용 게시물 삭제시 댓글 삭제
 
 댓글 삭제
 

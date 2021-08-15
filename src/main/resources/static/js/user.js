@@ -34,9 +34,12 @@ let index = {
 			// 회원가입 수행 요청(100초 가정)
 		}).done(function(resp) {
 
-			alert("회원가입이 완료되었습니다.");
-			// console.log(resp);
-			location.href = "/";
+			if (resp.status === 500) {
+				alert("회원가입에 실패하였습니다.");
+			} else {
+				alert("회원가입이 완료되었습니다.");
+				location.href = "/";
+			}
 
 		}).fail(function(error) {
 

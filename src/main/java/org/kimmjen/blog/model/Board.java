@@ -3,6 +3,7 @@ package org.kimmjen.blog.model;
 import java.sql.Timestamp;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -50,7 +51,8 @@ public class Board {
 	private User user; // DB는 오브젝트를 저장할 수 없다. FK, 자바는 오브젝트를 저장할 수 있다.
 	// user는 FK가 된다.
 	
-	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER)// mappedBy 연관관계의 주인이 아니다. (난 Fk가 아니다)
+	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER, cascade = CascadeType.REMOVE)// mappedBy 연관관계의 주인이 아니다. (난 Fk가 아니다)
+//	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)/
 	@JsonIgnoreProperties({"board"})
 	@OrderBy("id desc")
 	private List<Reply> replys;
