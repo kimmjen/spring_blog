@@ -1,16 +1,15 @@
 package org.kimmjen.blog.service;
 
-import java.util.List;
-
+import org.kimmjen.blog.dto.ReplySaveRequestDto;
 import org.kimmjen.blog.model.Board;
-import org.kimmjen.blog.model.RoleType;
+import org.kimmjen.blog.model.Reply;
 import org.kimmjen.blog.model.User;
 import org.kimmjen.blog.repository.BoardRepository;
+import org.kimmjen.blog.repository.ReplyRepository;
 import org.kimmjen.blog.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +18,12 @@ public class BoardService {
 
 	@Autowired
 	private BoardRepository boardRepository;
+	
+	@Autowired
+	private ReplyRepository replyRepository;
+	
+	@Autowired
+	private UserRepository userRepository;
 
 	@Transactional
 	public void 글쓰기(Board board, User user) { // title, content, count
@@ -62,4 +67,29 @@ public class BoardService {
 		board.setContent(requestBoard.getContent());
 		// 해당 함수로 종료시(Service가 종료될 때) 트랜잭션이 종료됩니다. 이때 더티체킹 - 자동 업데이트가 됨. db flush
 	}
+	
+	@Transactional
+	public void 댓글쓰기(ReplySaveRequestDto replySaveRequestDto) {
+		
+		User user = userRepository.findById(replySaveRequestDto.getUserId()).orElseThrow(()->{
+			return new IllegalArgumentException("댓글 쓰기 실패 : 유저id를 찾을 수 없습니다.");
+		});
+		
+		Board board = boardRepository.findById(replySaveRequestDto.getBoardId()).orElseThrow(()->{
+			return new IllegalArgumentException("댓글 쓰기 실패 : 게시글id를 찾을 수 없습니다.");
+		});
+		
+		Reply reply = Reply.builder()
+				.user(user)
+				.board(board)
+				.content(replySaveRequestDto.getContent())
+				.build();
+		
+//		Reply reply = new Reply();
+//		reply.update(user, board, replySaveRequestDto.getContent());
+		
+		
+		replyRepository.save(reply);
+	}
+	
 }

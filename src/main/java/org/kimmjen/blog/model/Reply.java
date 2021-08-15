@@ -14,6 +14,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.kimmjen.blog.dto.ReplySaveRequestDto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,14 +39,24 @@ public class Reply {
 	@JoinColumn(name = "boardId")
 	private Board board;
 	
-	@ManyToOne(fetch = FetchType.EAGER)
+	@ManyToOne
 	@JoinColumn(name = "userId")
 	private User user;
 	
-	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER)//mappedBy 연관관계 주인 아니다. DB에 칼럼 만들지 말기.
-	private List<Reply> reply;
+	/*
+	 * @OneToMany(mappedBy = "board", fetch = FetchType.EAGER)//mappedBy 연관관계 주인
+	 * 아니다. DB에 칼럼 만들지 말기. private List<Reply> reply;
+	 */
 	
 	@CreationTimestamp
 	private Timestamp createDate;
+	
+//	public void update(User user, Board board, String content) {
+//		
+//		setUser(user);
+//		setBoard(board);
+//		setContent(content);
+//		
+//	}
 
 }
