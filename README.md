@@ -3967,22 +3967,272 @@ public class Board {
 
 댓글 삭제
 
-``
-```java
+`detail.js`
+```javascript
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+
+<%@ include file="../layout/header.jsp"%>
+
+<div class="container" style="margin-top: 30px;">
+
+	<h2>글 상세보기</h2>
+	<hr />
+
+	<button class="btn btn-secondary" onclick="history.back()">돌아가기</button>
+	<c:if test="${board.user.id == principal.user.id }">
+		<a href="/board/${board.id}/updateForm" class="btn btn-warning">수정</a>
+		<button id="btn-delete" class="btn btn-danger">삭제</button>
+	</c:if>
+	<br /> <br />
+	<div>
+		글 번호 : <span id="id"><i>${board.id}</i></span> 작성자 : <span><i>${board.user.username}</i></span>
+	</div>
+
+	<div>
+		<label for="title">제목</label>
+		<h3>${board.title}</h3>
+	</div>
+	<br />
+	<div>
+		<label for="content">내용</label>
+		<div>${board.content}</div>
+	</div>
+	<br />
+
+	<div class="card">
+		<form>
+		<input type="hidden" id="userId" value="${principal.user.id }" />
+		<input tpye="hidden" id="boardId" value="${board.id }" />
+			<div class="card-body">
+				<textarea id="reply-content" class="form-control" rows="1"></textarea>
+			</div>
+			<div class="card-footer">
+				<button type="button" id="btn-reply-save" class="btn btn-primary">등록</button>
+			</div>
+		</form>
+	</div>
+	<br />
+	<div class="card">
+		<div class="card-header">댓글리스트</div>
+		<ul id="reply-box" class="list-group">
+			<c:forEach var="reply" items="${board.replys }">
+				<li id="reply-${reply.id }" class="list-group-item d-flex justify-content-between">
+					<div>${reply.content }</div>
+					<div class="d-flex">
+						<div class="font-italic">작성자 : ${reply.user.username }
+							&nbsp;</div>
+						<button onclick="index.replyDelete(${board.id}, ${reply.id})" class="badge">삭제</button>
+
+					</div>
+				</li>
+			</c:forEach>
+
+		</ul>
+	</div>
+
+</div>
+
+<script src="/js/board.js"></script>
+<%@ include file="../layout/footer.jsp"%>
+
 
 ```
 
-``
+`BoardApiController.java`
 ```java
+package org.kimmjen.blog.controller.api;
+
+import org.kimmjen.blog.config.auth.PrincipalDetail;
+import org.kimmjen.blog.dto.ReplySaveRequestDto;
+import org.kimmjen.blog.dto.ResponseDto;
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.Reply;
+import org.kimmjen.blog.service.BoardService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class BoardApiController {
+	
+	@Autowired
+	private BoardService boardService;
+	
+
+	@PostMapping("/api/board")
+	public ResponseDto<Integer> save(@RequestBody Board board, @AuthenticationPrincipal PrincipalDetail principal) {
+		
+		boardService.글쓰기(board, principal.getUser());
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+
+	}
+	
+	@DeleteMapping("/api/board/{id}")
+	public ResponseDto<Integer> deleteById(@PathVariable int id) {
+		
+		boardService.글삭제하기(id);
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+	}
+	
+	@PutMapping("/api/board/{id}")
+	public ResponseDto<Integer> update(@PathVariable int id, @RequestBody Board board){
+		System.out.println("BoardApiController : update : id : "+id);
+		System.out.println("BoardApiController : update : board : "+board.getTitle());
+		System.out.println("BoardApiController : update : board : "+board.getContent());
+		boardService.글수정하기(id, board);
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+	}
+	
+	// 데이터 받을 때 컨트롤러에서 dto를 만들어서 받는게 좋다.
+	// dto 사용하지 않은 이유는 
+//	@PostMapping("/api/board/{id}/reply")
+//	public ResponseDto<Integer> replySave(@PathVariable int boardId, @RequestBody Reply reply, @AuthenticationPrincipal PrincipalDetail principal) {
+//		
+////		reply.setUser(principal.getUser());
+////		reply.setBoard(null);
+//		
+//		boardService.댓글쓰기(principal.getUser(), boardId, reply);
+//		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+//
+//	}
+
+	@PostMapping("/api/board/{id}/reply")
+	public ResponseDto<Integer> replySave(@RequestBody ReplySaveRequestDto replySaveRequestDto) {
+		
+		boardService.댓글쓰기(replySaveRequestDto);
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1);
+
+	}
+	
+	@DeleteMapping("/api/board/{boardId}/reply/{replyId}")
+	public ResponseDto<Integer> replyDelete(@PathVariable int replyId) {
+		boardService.댓글삭제(replyId);
+		return new ResponseDto<Integer>(HttpStatus.OK.value(), 1); 
+	}
+
+}
 
 ```
 
-``
+`BoardService.java`
 ```java
+package org.kimmjen.blog.service;
 
-```
+import org.kimmjen.blog.dto.ReplySaveRequestDto;
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.Reply;
+import org.kimmjen.blog.model.User;
+import org.kimmjen.blog.repository.BoardRepository;
+import org.kimmjen.blog.repository.ReplyRepository;
+import org.kimmjen.blog.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-``
-```java
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor // 초기화 되지 않은 생성자를 호출 할 때 초기화 해줘.(boardRepository, replyRepository)
+public class BoardService {
+
+//	@Autowired
+//	private BoardRepository boardRepository;
+//	
+//	@Autowired
+//	private ReplyRepository replyRepository;
+	
+	private final BoardRepository boardRepository;
+	private final ReplyRepository replyRepository;
+	
+//	public BoardService(BoardRepository bRepo, ReplyRepository rRepo) {
+//		this.boardRepository = bRepo;
+//		this.replyRepository = rRepo;
+//	}
+
+	@Transactional
+	public void 글쓰기(Board board, User user) { // title, content, count
+
+		board.setCount(0);
+		board.setUser(user);
+		boardRepository.save(board);
+	}
+
+//	public List<Board> 글목록() {
+//		
+//		return boardRepository.findAll();
+//	}
+
+	@Transactional(readOnly = true)
+	public Page<Board> 글목록(Pageable pageable) {
+
+		return boardRepository.findAll(pageable);
+	}
+
+	@Transactional(readOnly = true)
+	public Board 글상세보기(int id) {
+		return boardRepository.findById(id).orElseThrow(() -> {
+			return new IllegalArgumentException("글 상세보기 실패 : 아이디를 찾을 수 없습니다.");
+		});
+	}
+
+	@Transactional
+	public void 글삭제하기(int id) {
+		System.out.println("글삭제가 완료되었습니다." + id);
+		boardRepository.deleteById(id);
+	}
+
+	@Transactional
+	public void 글수정하기(int id, Board requestBoard) {
+		Board board = boardRepository.findById(id)
+				.orElseThrow(()->{
+					return new IllegalArgumentException("글 찾기 실패 : 아이디를 찾을 수 없습니다.");
+				}); // 영속화 완료
+		board.setTitle(requestBoard.getTitle());
+		board.setContent(requestBoard.getContent());
+		// 해당 함수로 종료시(Service가 종료될 때) 트랜잭션이 종료됩니다. 이때 더티체킹 - 자동 업데이트가 됨. db flush
+	}
+	
+	@Transactional
+	public void 댓글쓰기(ReplySaveRequestDto replySaveRequestDto) {
+		
+//		User user = userRepository.findById(replySaveRequestDto.getUserId()).orElseThrow(()->{
+//			return new IllegalArgumentException("댓글 쓰기 실패 : 유저id를 찾을 수 없습니다.");
+//		});
+//		
+//		Board board = boardRepository.findById(replySaveRequestDto.getBoardId()).orElseThrow(()->{
+//			return new IllegalArgumentException("댓글 쓰기 실패 : 게시글id를 찾을 수 없습니다.");
+//		});
+//		
+//		Reply reply = Reply.builder()
+//				.user(user)
+//				.board(board)
+//				.content(replySaveRequestDto.getContent())
+//				.build();
+		
+//		Reply reply = new Reply();
+//		reply.update(user, board, replySaveRequestDto.getContent());
+		
+		
+//		replyRepository.mSave(replySaveRequestDto);
+		int result = replyRepository.mSave(replySaveRequestDto.getUserId(), replySaveRequestDto.getBoardId(), replySaveRequestDto.getContent());
+//		System.out.println("BoardService : " + result);
+//		System.out.println(result); // 오브젝트를 출력하게 되면 자동으로 toString() 이 호출됨.
+	}
+	
+	@Transactional
+	public void 댓글삭제(int replyId) {
+		replyRepository.deleteById(replyId);
+	}
+	
+}
 
 ```

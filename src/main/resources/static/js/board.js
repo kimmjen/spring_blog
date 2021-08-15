@@ -75,7 +75,7 @@ let index = {
 			alert(JSON.stringify(error));
 		});
 	},
-	
+
 	replySave: function() {
 		let data = {
 			//boardId: $("#boardId").val(),
@@ -84,8 +84,8 @@ let index = {
 			content: $("#reply-content").val()
 			// email: $("#email").val()
 		};
-		
-		
+
+
 		$.ajax({
 
 			type: "POST",
@@ -104,6 +104,19 @@ let index = {
 
 			alert(JSON.stringify(error));
 
+		});
+	},
+
+	replyDelete: function(boardId, replyId) {
+		$.ajax({
+			type: "DELETE",
+			url: `/api/board/${boardId}/reply/${replyId}`,
+			dataType: "json"
+		}).done(function(resp) {
+			alert("댓글삭제 성공");
+			location.href = `/board/${boardId}`;
+		}).fail(function(error) {
+			alert(JSON.stringify(error));
 		});
 	},
 
@@ -131,7 +144,7 @@ let index = {
 
 		});
 	}*/
-	
+
 	/*update: function() {
 		
 		let id = $("#id").val();

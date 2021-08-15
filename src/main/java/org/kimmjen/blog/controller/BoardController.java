@@ -31,7 +31,7 @@ public class BoardController {
 //    }
 	@GetMapping({ "", "/" })
 	public String index(Model model,
-			@PageableDefault(size = 2, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) { // 컨트롤러에서
+			@PageableDefault(size = 5, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) { // 컨트롤러에서
 																											// principalDetail																											// session
 																										// 어떻게 찾나?
 

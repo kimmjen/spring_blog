@@ -99,8 +99,14 @@ public class BoardService {
 		
 //		replyRepository.mSave(replySaveRequestDto);
 		int result = replyRepository.mSave(replySaveRequestDto.getUserId(), replySaveRequestDto.getBoardId(), replySaveRequestDto.getContent());
+		System.out.println("BoardService : "+result);
 //		System.out.println("BoardService : " + result);
 //		System.out.println(result); // 오브젝트를 출력하게 되면 자동으로 toString() 이 호출됨.
+	}
+	
+	@Transactional
+	public void 댓글삭제(int replyId) {
+		replyRepository.deleteById(replyId);
 	}
 	
 }
