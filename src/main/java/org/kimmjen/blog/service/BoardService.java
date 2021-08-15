@@ -13,17 +13,25 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor // 초기화 되지 않은 생성자를 호출 할 때 초기화 해줘.(boardRepository, replyRepository)
 public class BoardService {
 
-	@Autowired
-	private BoardRepository boardRepository;
+//	@Autowired
+//	private BoardRepository boardRepository;
+//	
+//	@Autowired
+//	private ReplyRepository replyRepository;
 	
-	@Autowired
-	private ReplyRepository replyRepository;
+	private final BoardRepository boardRepository;
+	private final ReplyRepository replyRepository;
 	
-	@Autowired
-	private UserRepository userRepository;
+//	public BoardService(BoardRepository bRepo, ReplyRepository rRepo) {
+//		this.boardRepository = bRepo;
+//		this.replyRepository = rRepo;
+//	}
 
 	@Transactional
 	public void 글쓰기(Board board, User user) { // title, content, count
