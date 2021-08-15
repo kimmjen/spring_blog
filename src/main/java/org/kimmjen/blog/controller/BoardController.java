@@ -32,9 +32,8 @@ public class BoardController {
 	@GetMapping({ "", "/" })
 	public String index(Model model,
 			@PageableDefault(size = 2, sort = "id", direction = Sort.Direction.DESC) Pageable pageable) { // 컨트롤러에서
-																											// principalDetail
-																											// session
-																											// 어떻게 찾나?
+																											// principalDetail																											// session
+																										// 어떻게 찾나?
 
 		model.addAttribute("boards", boardService.글목록(pageable));
 		// WEB-INF/views/index

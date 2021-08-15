@@ -2615,7 +2615,11 @@ index.init();
 > 이전에는 let data에서 username안불러왔지만 여기서는 부름
 
 ## 18. 댓글 
+
 - 댓글 디자인
+- 댓글 목록
+- 댓글 작성
+
 `detail.jsp`
 ```jsp
 <%@ page language="java" contentType="text/html; charset=UTF-8"
@@ -2680,3 +2684,201 @@ index.init();
 
 
 ```
+
+[댓글목록](#댓글-목록)
+
+`mysql`
+```mysql
+insert into reply(content, boardId, userId, createDate)
+values('첫번째댓글', 1, 2, now());
+
+insert into reply(content, boardId, userId, createDate)
+values('두번째댓글', 1, 2, now());
+
+insert into reply(content, boardId, userId, createDate)
+values('세번째댓글', 1, 2, now());
+```
+
+`board.java`
+```java
+package org.kimmjen.blog.model;
+
+import java.sql.Timestamp;
+import java.util.List;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Board {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY) // auto_increment
+	private int id;
+	
+	@Column(length = 100, nullable = false)
+	private String title;
+	
+//	@Column(length = )
+	@Lob // 대용량 데이터
+	private String content; // 섬머노트 라이브러리 <html>태크가 섞여서 디자인이 됨
+	
+	private int count; // 조회수
+	
+	@ManyToOne(fetch = FetchType.EAGER) // 연관관계만들어준다. Board(Many) To User(One) 한명의 유저는 여러개의 게시글을 쓸 수 있다. <-> OneToMany
+	@JoinColumn(name="userId")
+	private User user; // DB는 오브젝트를 저장할 수 없다. FK, 자바는 오브젝트를 저장할 수 있다.
+	// user는 FK가 된다.
+	
+	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER)// mappedBy 연관관계의 주인이 아니다. (난 Fk가 아니다)
+	@JsonIgnoreProperties({"board"})
+	private List<Reply> replys;
+	
+	@CreationTimestamp // 자동 값 입력
+	private Timestamp createDate;
+
+}
+
+```
+
+`ReplyControllerTest.java`
+```
+package org.kimmjen.blog.test;
+
+import java.util.List;
+
+import org.kimmjen.blog.model.Board;
+import org.kimmjen.blog.model.Reply;
+import org.kimmjen.blog.repository.BoardRepository;
+import org.kimmjen.blog.repository.ReplyRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class ReplyControllerTest {
+
+	@Autowired
+	private BoardRepository boardRepository;
+	
+	@Autowired
+	private ReplyRepository replyRepository;
+	
+	@GetMapping("/test/board/{id}")
+	public Board getBoard(@PathVariable int id) {
+		return boardRepository.findById(id).get(); // jackson 라이브러리 (오브젝트를 json으로 리턴) => 모델의 getter를 호출
+	}
+	
+	@GetMapping("/test/reply")
+	public List<Reply> getReply() {
+		return replyRepository.findAll(); // jackson 라이브러리 (오브젝트를 json으로 리턴) => 모델의 getter를 호출
+	}
+}
+```
+
+`ReplyRepository.java`
+```java
+package org.kimmjen.blog.repository;
+
+import org.kimmjen.blog.model.Reply;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface ReplyRepository extends JpaRepository<Reply, Integer>{
+
+}
+
+```
+
+`detail.jsp`
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+
+<%@ include file="../layout/header.jsp"%>
+
+<div class="container" style="margin-top: 30px;">
+
+	<h2>글 상세보기</h2>
+	<hr />
+
+	<button class="btn btn-secondary" onclick="history.back()">돌아가기</button>
+	<c:if test="${board.user.id == principal.user.id }">
+		<a href="/board/${board.id}/updateForm" class="btn btn-warning">수정</a>
+		<button id="btn-delete" class="btn btn-danger">삭제</button>
+	</c:if>
+	<br /> <br />
+	<div>
+		글 번호 : <span id="id"><i>${board.id}</i></span> 작성자 : <span><i>${board.user.username}</i></span>
+	</div>
+
+	<div>
+		<label for="title">제목</label>
+		<h3>${board.title}</h3>
+	</div>
+	<br />
+	<div>
+		<label for="content">내용</label>
+		<div>${board.content}</div>
+	</div>
+	<br />
+
+	<div class="card">
+
+		<div class="card-body">
+			<textarea class="form-control" rows="1"></textarea>
+		</div>
+		<div class="card-footer">
+			<button class="btn btn-primary">등록</button>
+		</div>
+	</div>
+	<br />
+	<div class="card">
+		<div class="header">댓글리스트</div>
+		<ul id="reply--box" class="list-group">
+			<c:forEach var="reply" items="${board.replys }">
+				<li id="reply--1"
+					class="list-group-item d-flex justify-content-between">
+					<div>${reply.content }</div>
+					<div class="d-flex">
+						<div class="font-italic">작성자 : ${reply.user.username } &nbsp;</div>
+						<button class="badge">삭제</button>
+						
+					</div>
+				</li>
+			</c:forEach>
+
+		</ul>
+	</div>
+
+</div>
+
+<script src="/js/board.js"></script>
+<%@ include file="../layout/footer.jsp"%>
+
+
+```
+
+[댓글 작성](#댓글-작성)
